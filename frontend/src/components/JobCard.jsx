@@ -1,287 +1,180 @@
 import React, { useState } from 'react';
-import { companyDatabase } from '../data/companyData';
 
-// Inline SVGs for card icons
-const LinkedInIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-  </svg>
-);
+/* ─── Source badge colours ──────────────────────────────────────────────────── */
+const SOURCE_STYLES = {
+  'Remotive':    { bg:'#FDF4FF', text:'#9333EA', border:'#E9D5FF' },
+  'Arbeitnow':  { bg:'#F0FDF4', text:'#16A34A', border:'#BBF7D0' },
+  'The Muse':   { bg:'#FFF1F2', text:'#E11D48', border:'#FECDD3' },
+  'Adzuna':     { bg:'#FFF7ED', text:'#EA580C', border:'#FED7AA' },
+  'JSearch':    { bg:'#ECFDF5', text:'#059669', border:'#A7F3D0' },
+  'InternPulse':{ bg:'#EFF6FF', text:'#2563EB', border:'#BFDBFE' },
+};
 
-const LinkIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-  </svg>
-);
+const WORK_MODE_STYLES = {
+  'Remote':  { bg:'#F0FDF4', text:'#16A34A', border:'#BBF7D0', label:'🌐 Remote'  },
+  'Hybrid':  { bg:'#FFF7ED', text:'#EA580C', border:'#FED7AA', label:'🏢 Hybrid'  },
+  'On-site': { bg:'#F8FAFC', text:'#64748B', border:'#E2E8F0', label:'📍 On-site' },
+};
 
-const CheckIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400 mt-0.5 shrink-0">
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
-);
+/* ─── Time ago helper ──────────────────────────────────────────────────────── */
+function timeAgo(dateStr) {
+  if (!dateStr) return 'Recently';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  const h = Math.floor(diff / 3600000);
+  const d = Math.floor(diff / 86400000);
+  if (m < 60) return `${m}m ago`;
+  if (h < 24) return `${h}h ago`;
+  if (d === 1) return 'Yesterday';
+  if (d < 7)  return `${d}d ago`;
+  if (d < 30) return `${Math.floor(d/7)}w ago`;
+  return new Date(dateStr).toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+}
 
-const MapPinIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
-    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-    <circle cx="12" cy="10" r="3" />
-  </svg>
-);
+/* ─── Company logo with fallback ────────────────────────────────────────────── */
+function CompanyLogo({ company = '', logoUrl, size = 44 }) {
+  const [failed, setFailed] = useState(false);
 
-const CalendarIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
-    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-    <line x1="16" x2="16" y1="2" y2="6" />
-    <line x1="8" x2="8" y1="2" y2="6" />
-    <line x1="3" x2="21" y1="10" y2="10" />
-  </svg>
-);
+  // Colour avatar fallback
+  const COLOURS = [
+    ['#EFF6FF','#2563EB'],['#F0FDF4','#16A34A'],['#FFF7ED','#EA580C'],
+    ['#FDF4FF','#9333EA'],['#FFF1F2','#E11D48'],['#ECFDF5','#059669'],
+    ['#F0F9FF','#0284C7'],['#FEFCE8','#CA8A04'],
+  ];
+  const [bg, fg] = COLOURS[(company.charCodeAt(0) || 0) % COLOURS.length];
+  const initials = (company || '??').slice(0, 2).toUpperCase();
 
-const ExternalLinkIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15 3h6v6" />
-    <path d="M10 14 21 3" />
-    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-  </svg>
-);
+  if (logoUrl && !failed) {
+    return (
+      <img src={logoUrl} alt={company} onError={() => setFailed(true)}
+        className="rounded-xl object-contain bg-white border border-[#E2E8F0]"
+        style={{ width: size, height: size, padding: 4 }} />
+    );
+  }
+  return (
+    <div className="rounded-xl flex items-center justify-center font-extrabold shrink-0"
+      style={{ width: size, height: size, background: bg, color: fg, fontSize: size * 0.33, border: `1px solid ${fg}25` }}>
+      {initials}
+    </div>
+  );
+}
 
-export default function JobCard({ job, onSelectCompany }) {
-  const { title, company, location, url, source, postedAt, tags, isRemote, isInternship } = job;
-  const [showInfo, setShowInfo] = useState(false);
+/* ─── Main JobCard ───────────────────────────────────────────────────────────── */
+export default function JobCard({ job }) {
+  if (!job) return null;
 
-  // Retrieve company profile from database or construct fallback
-  const cleanCompanyName = company ? company.trim() : '';
-  const hasProfile = companyDatabase.hasOwnProperty(cleanCompanyName);
-  const companyInfo = hasProfile ? companyDatabase[cleanCompanyName] : {
-    description: `${company} is an active recruiter listing opportunities in India.`,
-    linkedin: `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(company)}`,
-    unstop: `https://unstop.com/search?q=${encodeURIComponent(company)}`,
-    internshala: `https://internshala.com/internships/keywords-${encodeURIComponent(company)}`,
-    naukri: `https://www.naukri.com/${encodeURIComponent(company.toLowerCase().replace(/\s+/g, '-'))}-jobs`,
-    resumeTips: [
-      "Optimize your resume for Applicant Tracking Systems (ATS) by including relevant skills from the listing.",
-      "Detail your experience in projects matching the required stack.",
-      "Showcase problem-solving, algorithms, and data structure capabilities.",
-      "Ensure links to your live projects and GitHub repositories are clear."
-    ]
-  };
-
-  // Calculates relative posting time
-  const getRelativeTime = (dateString) => {
-    const now = new Date();
-    const date = new Date(dateString);
-    const diffTime = Math.abs(now - date);
-    const diffMinutes = Math.floor(diffTime / (1000 * 60));
-    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffMinutes < 60) {
-      return diffMinutes <= 1 ? 'Just now' : `${diffMinutes} mins ago`;
-    } else if (diffHours < 24) {
-      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else {
-      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    }
-  };
-
-  // Identifies if the post was created within the last 5 days
-  const checkIfNew = (dateString) => {
-    const date = new Date(dateString);
-    const difference = Date.now() - date.getTime();
-    const days = difference / (1000 * 3600 * 24);
-    return days <= 5;
-  };
-
-  const isNew = checkIfNew(postedAt);
+  const src   = SOURCE_STYLES[job.source] ?? SOURCE_STYLES['InternPulse'];
+  const wm    = WORK_MODE_STYLES[job.workMode] ?? WORK_MODE_STYLES['On-site'];
+  const skills = (job.skills || job.tags || []).slice(0, 5);
 
   return (
-    <div className="group relative bg-darkCard border border-darkBorder hover:border-indigo-500/40 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-premium flex flex-col justify-between">
-      
-      {/* Background Glow Effect on Hover */}
-      <div className="absolute inset-0 rounded-2xl bg-indigo-500/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+    <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 flex flex-col hover:border-[#CBD5E1] hover:shadow-md transition-all duration-200"
+      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
 
-      <div>
-        {/* Top Badges & Meta */}
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            {/* Source Badge */}
-            <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded ${
-              source === 'Remotive' 
-                ? 'bg-purple-950/40 text-purple-300 border border-purple-800/30' 
-                : 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/30'
-            }`}>
-              {source}
+      {/* ── Top row: logo + title + badges ────────────────── */}
+      <div className="flex items-start gap-3 mb-3">
+        <CompanyLogo company={job.company} logoUrl={job.logoUrl} size={44} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 flex-wrap">
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-[#0F172A] leading-snug line-clamp-2">{job.title}</h3>
+              <p className="text-xs text-[#64748B] font-medium mt-0.5">{job.company}</p>
+            </div>
+            {/* Verified badge */}
+            {job.verifiedRecently && (
+              <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] badge-new inline-block"/>
+                Verified Recently
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Meta row: location, work mode, stipend ─────────── */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {/* Location */}
+        <span className="inline-flex items-center gap-1 text-[11px] text-[#64748B] bg-[#F8FAFC] border border-[#E2E8F0] rounded-full px-2.5 py-1">
+          📍 {job.location || 'India'}
+        </span>
+
+        {/* Work mode */}
+        <span className="inline-flex items-center text-[11px] font-semibold rounded-full px-2.5 py-1 border"
+          style={{ background: wm.bg, color: wm.text, borderColor: wm.border }}>
+          {wm.label}
+        </span>
+
+        {/* Duration */}
+        {job.duration && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-[#64748B] bg-[#F8FAFC] border border-[#E2E8F0] rounded-full px-2.5 py-1">
+            ⏱ {job.duration}
+          </span>
+        )}
+
+        {/* Stipend */}
+        {job.stipend && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#16A34A] bg-[#F0FDF4] border border-[#BBF7D0] rounded-full px-2.5 py-1">
+            💰 {job.stipend}
+          </span>
+        )}
+      </div>
+
+      {/* ── Skills/Tags ─────────────────────────────────────── */}
+      {skills.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {skills.map(t => (
+            <span key={t} className="px-2 py-0.5 text-[10px] font-semibold text-[#475569] bg-[#F1F5F9] border border-[#E2E8F0] rounded-md">
+              {t}
             </span>
-
-            {/* Remote Status Badge */}
-            {isRemote && (
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-blue-950/40 text-blue-300 border border-blue-800/30">
-                Remote
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            {/* "New" Badge */}
-            {isNew && (
-              <span className="flex items-center gap-1 text-[10px] uppercase font-extrabold tracking-wider bg-brandSecondary/15 text-brandSecondary px-2 py-0.5 rounded border border-brandSecondary/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
-                New
-              </span>
-            )}
-
-            {/* "Internship" Badge */}
-            {isInternship && (
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-950/40 text-amber-300 border border-amber-800/30">
-                Internship
-              </span>
-            )}
-          </div>
+          ))}
+          {(job.skills || job.tags || []).length > 5 && (
+            <span className="px-2 py-0.5 text-[10px] text-[#94A3B8]">+{(job.skills || job.tags || []).length - 5}</span>
+          )}
         </div>
+      )}
 
-        {/* Title & Company */}
-        <h3 className="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors duration-200 line-clamp-2">
-          {title}
-        </h3>
-        <button
-          onClick={() => onSelectCompany && onSelectCompany(company)}
-          className="text-slate-300 hover:text-indigo-400 font-medium text-sm mt-1 text-left transition-colors duration-200 focus:outline-none"
-        >
-          {company}
-        </button>
-
-        {/* Meta Info: Location and Calendar */}
-        <div className="flex flex-col gap-2 mt-4 text-xs text-slate-400">
-          <div className="flex items-center gap-1.5">
-            <MapPinIcon />
-            <span className="truncate">{location}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <CalendarIcon />
-            <span>{getRelativeTime(postedAt)}</span>
-          </div>
+      {/* ── Country chip (if not India) ──────────────────────── */}
+      {job.country && job.country !== 'India' && (
+        <div className="mb-3">
+          <span className="text-[10px] font-semibold text-[#64748B] bg-[#F8FAFC] border border-[#E2E8F0] rounded-full px-2.5 py-1">
+            🌍 {job.country}
+          </span>
         </div>
-      </div>
+      )}
 
-      {/* Tags & Action Button */}
-      <div className="mt-6 pt-4 border-t border-darkBorder flex flex-col gap-4">
-        {/* Tags list */}
-        {tags && tags.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {tags.map((tag, index) => (
-              <span key={index} className="text-[11px] bg-slate-900 text-slate-400 px-2.5 py-1 rounded-lg border border-darkBorder/40">
-                {tag}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <div className="h-6" /> // Placeholder spacing
-        )}
+      {/* Spacer */}
+      <div className="flex-1"/>
 
-        {/* Toggle Details Button */}
-        <button
-          onClick={() => setShowInfo(!showInfo)}
-          className="w-full flex items-center justify-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-bold border border-indigo-500/20 hover:border-indigo-500/40 bg-indigo-500/5 hover:bg-indigo-500/10 py-2.5 rounded-xl transition-all duration-200"
-        >
-          <span>{showInfo ? 'Hide Company Info' : 'View Company Info'}</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={`transition-transform duration-200 ${showInfo ? 'rotate-180' : ''}`}
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </button>
+      {/* ── Footer: source + time + apply ────────────────────── */}
+      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#F1F5F9] flex-wrap">
+        {/* Source badge */}
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold border rounded-full px-2.5 py-1"
+          style={{ background: src.bg, color: src.text, borderColor: src.border }}>
+          <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: src.text }}/>
+          {job.source}
+        </span>
 
-        {/* Application Link */}
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-brandPrimary text-slate-200 hover:text-white font-semibold text-sm py-2.5 rounded-xl border border-darkBorder hover:border-brandPrimary transition-all duration-200"
-        >
-          <span>Apply Now</span>
-          <ExternalLinkIcon />
-        </a>
+        {/* Posted time */}
+        <span className="text-[11px] text-[#94A3B8]">{timeAgo(job.postedAt)}</span>
 
-        {/* Expandable Company Spotlight Details */}
-        {showInfo && (
-          <div className="mt-4 pt-4 border-t border-darkBorder/60 space-y-4 text-xs">
-            {/* Description */}
-            <div>
-              <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">About Company</h4>
-              <p className="text-slate-300 leading-relaxed font-light">{companyInfo.description}</p>
-            </div>
+        {/* Spacer */}
+        <div className="flex-1"/>
 
-            {/* Application Guidelines */}
-            <div>
-              <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 mb-1.5">Resume Requirements</h4>
-              <ul className="space-y-1.5">
-                {companyInfo.resumeTips.map((tip, idx) => (
-                  <li key={idx} className="flex gap-1.5 text-slate-300 font-light">
-                    <CheckIcon />
-                    <span>{tip}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Quick Links */}
-            <div>
-              <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 mb-2">Authentic Career Pages</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <a
-                  href={companyInfo.linkedin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 bg-[#0a66c2]/10 hover:bg-[#0a66c2]/20 text-[#0a66c2] border border-[#0a66c2]/10 py-2 rounded-lg font-bold text-[10px] transition-all"
-                >
-                  <LinkedInIcon />
-                  <span>LinkedIn</span>
-                </a>
-                <a
-                  href={companyInfo.unstop}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/10 py-2 rounded-lg font-bold text-[10px] transition-all"
-                >
-                  <LinkIcon />
-                  <span>Unstop</span>
-                </a>
-                <a
-                  href={companyInfo.internshala}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/10 py-2 rounded-lg font-bold text-[10px] transition-all"
-                >
-                  <LinkIcon />
-                  <span>Internshala</span>
-                </a>
-                <a
-                  href={companyInfo.naukri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/10 py-2 rounded-lg font-bold text-[10px] transition-all"
-                >
-                  <LinkIcon />
-                  <span>Naukri</span>
-                </a>
-              </div>
-            </div>
-          </div>
+        {/* Internship badge */}
+        {job.isInternship && (
+          <span className="text-[10px] font-bold text-[#7C3AED] bg-[#F5F3FF] border border-[#DDD6FE] rounded-full px-2 py-0.5">
+            🎓 Intern
+          </span>
         )}
       </div>
 
+      {/* ── Apply button ────────────────────────────────────── */}
+      <a href={job.url || '#'} target="_blank" rel="noopener noreferrer"
+        className={`mt-3 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 ${
+          job.url ? 'bg-[#2563EB] hover:bg-[#1D4ED8]' : 'bg-[#94A3B8] cursor-not-allowed'
+        }`}>
+        {job.url ? 'Apply Now →' : 'Link Unavailable'}
+      </a>
     </div>
   );
 }

@@ -7,21 +7,30 @@ export default {
   theme: {
     extend: {
       colors: {
-        darkBg: '#090d16',      // Very deep obsidian background
-        darkCard: '#111827',    // Sleek card container background (slate-900 equivalent)
-        darkCardHover: '#1f2937',// Slightly lighter slate for hover states (slate-800)
-        darkBorder: '#1f2937',  // Clean grid line dividers
-        brandPrimary: '#6366f1',// Modern indigo primary button/highlights
-        brandPrimaryHover: '#4f46e5',
-        brandSecondary: '#10b981',// Vibrant emerald for "New" badge and accents
+        brand: {
+          blue:  '#2563EB',
+          green: '#22C55E',
+        },
+        bg:     '#F8FAFC',
+        card:   '#FFFFFF',
+        border: '#E2E8F0',
+        text: {
+          primary:   '#0F172A',
+          secondary: '#64748B',
+        },
       },
       fontFamily: {
-        sans: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       boxShadow: {
-        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-        'premium': '0 10px 25px -5px rgba(99, 102, 241, 0.15), 0 8px 10px -6px rgba(99, 102, 241, 0.15)'
-      }
+        card:  '0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px -1px rgba(0,0,0,0.04)',
+        hover: '0 4px 12px 0 rgba(0,0,0,0.10), 0 2px 4px -1px rgba(0,0,0,0.06)',
+      },
+      borderRadius: {
+        card: '12px',
+        lg2:  '14px',
+        xl2:  '16px',
+      },
     },
   },
   plugins: [],

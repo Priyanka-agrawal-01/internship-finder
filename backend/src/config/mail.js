@@ -1,67 +1,156 @@
+'use strict';
 const nodemailer = require('nodemailer');
 
-// Cache the transporter globally to avoid recreating it on every request
-let transporterInstance = null;
-let testAccountCredentials = null;
+// ─────────────────────────────────────────────────────────────────────────────
+//  TRANSPORTER SINGLETON  — created once, never recreated
+// ─────────────────────────────────────────────────────────────────────────────
+let _transporter       = null;
+let _isTestAccount     = false;
+let _initPromise       = null;          // prevents concurrent initialisation
+let _initDone          = false;
+
+// Maximum ms to wait for Ethereal account creation before giving up
+const ETHEREAL_TIMEOUT_MS = 5000;
 
 /**
- * Get the Nodemailer transporter instance, initializing it if necessary.
- * Support standard SMTP config from env or ethereal.email fallback for local testing.
+ * Promisified setTimeout helper
  */
-async function getTransporter() {
-  if (transporterInstance) {
-    return { transporter: transporterInstance, testCredentials: testAccountCredentials };
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+/**
+ * Race an async operation against a timeout.
+ * Resolves with the result or rejects with a TimeoutError.
+ */
+function withTimeout(promise, ms, label = 'Operation') {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([
+    promise.finally(() => clearTimeout(timer)),
+    timeout,
+  ]);
+}
+
+/**
+ * Build a guaranteed-working dummy transporter that logs to console.
+ * Used when SMTP credentials are missing AND Ethereal can't be reached.
+ */
+function buildDummyTransporter() {
+  console.warn('[Mail] Using DUMMY transporter — emails will be logged to console only.');
+  return nodemailer.createTransport({
+    streamTransport: true,
+    newline: 'unix',
+    buffer: true,
+  });
+}
+
+/**
+ * Initialise the transporter exactly once.
+ * Priority:
+ *   1. Real SMTP via SMTP_HOST/PORT/USER/PASS
+ *   2. Gmail shorthand via EMAIL_USER/EMAIL_PASS (legacy support)
+ *   3. Ethereal test account (with 5s timeout)
+ *   4. Console dummy (never hangs)
+ */
+async function initTransporter() {
+  // ── Option 1: Real SMTP (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS) ───────
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    console.log(`[Mail] Configuring SMTP → ${process.env.SMTP_HOST}:${process.env.SMTP_PORT || 587}`);
+    _transporter = nodemailer.createTransport({
+      host:   process.env.SMTP_HOST,
+      port:   parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      connectionTimeout: 8000,
+      greetingTimeout:   5000,
+      socketTimeout:     8000,
+    });
+    return;
   }
 
-  const hasEnvCredentials = process.env.EMAIL_USER && process.env.EMAIL_PASS;
-
-  if (hasEnvCredentials) {
-    console.log('Configuring Nodemailer with environment credentials...');
-    transporterInstance = nodemailer.createTransport({
+  // ── Option 2: Gmail shorthand (EMAIL_USER, EMAIL_PASS) ────────────────────
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    console.log(`[Mail] Configuring Gmail SMTP for ${process.env.EMAIL_USER}`);
+    _transporter = nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE || 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      connectionTimeout: 8000,
+      socketTimeout:     8000,
     });
-  } else {
-    console.log('No email environment variables found. Generating Ethereal test mail account...');
-    try {
-      const testAccount = await nodemailer.createTestAccount();
-      testAccountCredentials = testAccount;
-      transporterInstance = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false, // true for 465, false for other ports
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-      console.log(`\n=============================================================`);
-      console.log(`Ethereal Test Account Details:`);
-      console.log(`User: ${testAccount.user}`);
-      console.log(`Pass: ${testAccount.pass}`);
-      console.log(`View emails sent here at: https://ethereal.email/login`);
-      console.log(`=============================================================\n`);
-    } catch (error) {
-      console.error('Failed to create Ethereal test email account, falling back to console logger:', error.message);
-      
-      // Fallback dummy transporter so subscription route never crashes
-      transporterInstance = {
-        sendMail: async (options) => {
-          console.log('\n--- DUMMY EMAIL DISPATCH (NO SMTP CREDENTIALS AVAILABLE) ---');
-          console.log(`To: ${options.to}`);
-          console.log(`Subject: ${options.subject}`);
-          console.log(`Text: ${options.text}`);
-          console.log(`------------------------------------------------------------\n`);
-          return { messageId: `dummy-id-${Date.now()}` };
-        }
-      };
-    }
+    return;
   }
 
-  return { transporter: transporterInstance, testCredentials: testAccountCredentials };
+  // ── Option 3: Ethereal test account (with hard timeout) ───────────────────
+  console.log('[Mail] No SMTP credentials found — attempting Ethereal test account...');
+  try {
+    const testAccount = await withTimeout(
+      nodemailer.createTestAccount(),
+      ETHEREAL_TIMEOUT_MS,
+      'Ethereal account creation'
+    );
+
+    _isTestAccount = true;
+    _transporter = nodemailer.createTransport({
+      host:   'smtp.ethereal.email',
+      port:   587,
+      secure: false,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
+      connectionTimeout: 8000,
+      socketTimeout:     8000,
+    });
+
+    console.log('\n════════════════════════════════════════════════════════');
+    console.log('  📧 Ethereal Test Account Ready');
+    console.log(`  User: ${testAccount.user}`);
+    console.log(`  Pass: ${testAccount.pass}`);
+    console.log('  View sent emails → https://ethereal.email/login');
+    console.log('════════════════════════════════════════════════════════\n');
+    return;
+  } catch (err) {
+    console.warn(`[Mail] Ethereal failed (${err.message}) — falling back to dummy transporter.`);
+  }
+
+  // ── Option 4: Dummy transporter — NEVER HANGS ─────────────────────────────
+  _transporter = buildDummyTransporter();
 }
+
+/**
+ * Returns the initialised transporter.
+ * Safe to call concurrently — only initialises once.
+ */
+async function getTransporter() {
+  if (_initDone) {
+    return { transporter: _transporter, isTestAccount: _isTestAccount };
+  }
+
+  // Only run initTransporter once even if called concurrently
+  if (!_initPromise) {
+    _initPromise = initTransporter()
+      .then(() => { _initDone = true; })
+      .catch(err => {
+        console.error('[Mail] init failed, using dummy:', err.message);
+        _transporter = buildDummyTransporter();
+        _initDone = true;
+      });
+  }
+
+  await _initPromise;
+  return { transporter: _transporter, isTestAccount: _isTestAccount };
+}
+
+// Kick off initialisation immediately at startup (non-blocking)
+getTransporter().catch(() => {});
 
 module.exports = { getTransporter };

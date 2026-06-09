@@ -1,151 +1,222 @@
-import React from 'react';
+import React, { useState } from 'react';
 
+/* ─── Icons ───────────────────────────────────────────────────────────────── */
 const SearchIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
-    <circle cx="11" cy="11" r="8" />
-    <path d="m21 21-4.3-4.3" />
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.2" strokeLinecap="round">
+    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+  </svg>
+);
+const FilterIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.2" strokeLinecap="round">
+    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+  </svg>
+);
+const XSmallIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+);
+const ChevronIcon = ({ open }) => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.2" strokeLinecap="round"
+    className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+    <path d="m6 9 6 6 6-6"/>
   </svg>
 );
 
-const TrashIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 hover:text-red-400">
-    <path d="M3 6h18" />
-    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-  </svg>
-);
+/* ─── Section header with collapse ─────────────────────────────────────────── */
+function Section({ label, children, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div>
+      <button type="button" onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between mb-2 group">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] group-hover:text-[#64748B] transition-colors">
+          {label}
+        </span>
+        <ChevronIcon open={open} />
+      </button>
+      {open && <div className="space-y-1.5">{children}</div>}
+    </div>
+  );
+}
 
+/* ─── Radio option ──────────────────────────────────────────────────────────── */
+function RadioOpt({ value, current, onChange, label, count }) {
+  const active = value === current;
+  return (
+    <label className="flex items-center gap-2.5 cursor-pointer group py-0.5">
+      <div onClick={() => onChange(value)}
+        className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${
+          active ? 'border-[#2563EB] bg-[#2563EB]' : 'border-[#CBD5E1] group-hover:border-[#2563EB]'
+        }`}>
+        {active && <div className="w-1.5 h-1.5 rounded-full bg-white"/>}
+      </div>
+      <span onClick={() => onChange(value)}
+        className={`text-xs transition-colors flex-1 cursor-pointer ${active ? 'font-semibold text-[#0F172A]' : 'text-[#64748B] group-hover:text-[#0F172A]'}`}>
+        {label}
+      </span>
+      {count !== undefined && (
+        <span className="text-[10px] font-semibold text-[#94A3B8]">{count}</span>
+      )}
+    </label>
+  );
+}
+
+/* ─── Source badge colours ──────────────────────────────────────────────────── */
+const SOURCE_STYLES = {
+  'Remotive':    { bg:'#FDF4FF', text:'#9333EA', border:'#E9D5FF', dot:'#9333EA' },
+  'Arbeitnow':  { bg:'#F0FDF4', text:'#16A34A', border:'#BBF7D0', dot:'#16A34A' },
+  'The Muse':   { bg:'#FFF1F2', text:'#E11D48', border:'#FECDD3', dot:'#E11D48' },
+  'Adzuna':     { bg:'#FFF7ED', text:'#EA580C', border:'#FED7AA', dot:'#EA580C' },
+  'JSearch':    { bg:'#ECFDF5', text:'#059669', border:'#A7F3D0', dot:'#059669' },
+  'InternPulse':{ bg:'#EFF6FF', text:'#2563EB', border:'#BFDBFE', dot:'#2563EB' },
+};
+
+/* ─── SOURCES list ──────────────────────────────────────────────────────────── */
+const ALL_SOURCES = ['Remotive','Arbeitnow','The Muse','Adzuna','JSearch','InternPulse'];
+
+/* ─── Main component ─────────────────────────────────────────────────────────── */
 export default function SearchFilter({
-  searchTerm,
-  setSearchTerm,
-  selectedCompany,
-  setSelectedCompany,
-  selectedCity,
-  setSelectedCity,
-  jobType,
-  setJobType,
-  companies,
-  cities,
-  onReset
+  // search inputs
+  searchTerm, setSearchTerm,
+  companySearch, setCompanySearch,
+  skillsSearch, setSkillsSearch,
+  // select filters
+  selectedSource, setSelectedSource,
+  selectedCountry, setSelectedCountry,
+  selectedWorkMode, setSelectedWorkMode,
+  jobType, setJobType,
+  // data
+  countries = [],
+  // reset
+  onReset,
+  // active count
+  activeFilterCount = 0,
 }) {
   return (
-    <div className="glass-panel rounded-2xl p-6 shadow-xl mb-8 border border-darkBorder">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-        
-        {/* Search Input (Takes 4 cols) */}
-        <div className="lg:col-span-4 relative">
-          <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Search Jobs</label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <SearchIcon />
-            </div>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search title, company, tags..."
-              className="w-full bg-slate-900/80 border border-darkBorder hover:border-slate-700 focus:border-brandPrimary text-slate-100 placeholder-slate-500 text-sm rounded-xl pl-10 pr-4 py-3 outline-none transition-all duration-200"
-            />
-          </div>
-        </div>
+    <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 sticky top-20"
+      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
 
-        {/* Company Dropdown (Takes 3 cols) */}
-        <div className="lg:col-span-3">
-          <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Company</label>
-          <select
-            value={selectedCompany}
-            onChange={(e) => setSelectedCompany(e.target.value)}
-            className="w-full bg-slate-900/80 border border-darkBorder hover:border-slate-700 focus:border-brandPrimary text-slate-100 text-sm rounded-xl px-4 py-3 outline-none transition-all duration-200 appearance-none cursor-pointer"
-            style={{
-              backgroundImage: `url("data:image/svg+xml;utf8,<svg fill='%2394a3b8' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>")`,
-              backgroundPosition: 'right 12px center',
-              backgroundRepeat: 'no-repeat',
-              backgroundSize: '18px'
-            }}
-          >
-            <option value="">All Companies</option>
-            {companies.map((company, index) => (
-              <option key={index} value={company}>
-                {company}
-              </option>
-            ))}
-          </select>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <FilterIcon />
+          <span className="text-sm font-bold text-[#0F172A]">Filters</span>
+          {activeFilterCount > 0 && (
+            <span className="text-[10px] font-bold bg-[#2563EB] text-white px-1.5 py-0.5 rounded-full">
+              {activeFilterCount}
+            </span>
+          )}
         </div>
-
-        {/* City Dropdown (Takes 2 cols) */}
-        <div className="lg:col-span-2">
-          <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">City</label>
-          <select
-            value={selectedCity}
-            onChange={(e) => setSelectedCity(e.target.value)}
-            className="w-full bg-slate-900/80 border border-darkBorder hover:border-slate-700 focus:border-brandPrimary text-slate-100 text-sm rounded-xl px-4 py-3 outline-none transition-all duration-200 appearance-none cursor-pointer"
-            style={{
-              backgroundImage: `url("data:image/svg+xml;utf8,<svg fill='%2394a3b8' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>")`,
-              backgroundPosition: 'right 12px center',
-              backgroundRepeat: 'no-repeat',
-              backgroundSize: '18px'
-            }}
-          >
-            <option value="">All Cities</option>
-            {cities.map((city, index) => (
-              <option key={index} value={city}>
-                {city}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Job Type Toggle (Takes 2 cols) */}
-        <div className="lg:col-span-2">
-          <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Category</label>
-          <div className="grid grid-cols-3 bg-slate-900/80 p-1 rounded-xl border border-darkBorder">
-            <button
-              type="button"
-              onClick={() => setJobType('all')}
-              className={`text-[10px] sm:text-xs py-2 rounded-lg font-medium transition-all duration-150 ${
-                jobType === 'all'
-                  ? 'bg-brandPrimary text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              onClick={() => setJobType('internship')}
-              className={`text-[10px] sm:text-xs py-2 rounded-lg font-medium transition-all duration-150 ${
-                jobType === 'internship'
-                  ? 'bg-brandPrimary text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Intern
-            </button>
-            <button
-              type="button"
-              onClick={() => setJobType('remote')}
-              className={`text-[10px] sm:text-xs py-2 rounded-lg font-medium transition-all duration-150 ${
-                jobType === 'remote'
-                  ? 'bg-brandPrimary text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Remote
-            </button>
-          </div>
-        </div>
-
-        {/* Reset Button (Takes 1 col) */}
-        <div className="lg:col-span-1 flex items-end justify-center h-full pt-6 lg:pt-0">
-          <button
-            type="button"
-            onClick={onReset}
-            title="Reset Filters"
-            className="p-3 bg-slate-900/80 hover:bg-slate-800 border border-darkBorder hover:border-slate-600 text-slate-400 hover:text-white rounded-xl transition-all duration-200 flex items-center justify-center w-full lg:w-auto"
-          >
-            <TrashIcon />
+        {activeFilterCount > 0 && (
+          <button onClick={onReset}
+            className="flex items-center gap-1 text-xs font-semibold text-[#2563EB] hover:text-[#1D4ED8] transition-colors">
+            <XSmallIcon /> Clear
           </button>
+        )}
+      </div>
+
+      <div className="space-y-5">
+
+        {/* ── Search by role ─────────────────────────────────── */}
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-1.5">
+            Role / Title
+          </label>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><SearchIcon /></div>
+            <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              placeholder="e.g. Frontend, ML, VLSI…"
+              className="w-full border border-[#E2E8F0] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all" />
+          </div>
         </div>
+
+        {/* ── Search by company ──────────────────────────────── */}
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-1.5">
+            Company
+          </label>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><SearchIcon /></div>
+            <input type="text" value={companySearch} onChange={e => setCompanySearch(e.target.value)}
+              placeholder="e.g. Google, Razorpay…"
+              className="w-full border border-[#E2E8F0] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all" />
+          </div>
+        </div>
+
+        {/* ── Search by skills ──────────────────────────────── */}
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-1.5">
+            Skills / Tech Stack
+          </label>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><SearchIcon /></div>
+            <input type="text" value={skillsSearch} onChange={e => setSkillsSearch(e.target.value)}
+              placeholder="e.g. React, Python, VLSI…"
+              className="w-full border border-[#E2E8F0] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all" />
+          </div>
+        </div>
+
+        <hr className="border-[#F1F5F9]"/>
+
+        {/* ── Internship type ────────────────────────────────── */}
+        <Section label="Opening Type" defaultOpen={true}>
+          {[
+            { value:'all',        label:'All Positions'     },
+            { value:'internship', label:'Internships Only'  },
+          ].map(o => (
+            <RadioOpt key={o.value} value={o.value} current={jobType} onChange={setJobType} label={o.label} />
+          ))}
+        </Section>
+
+        {/* ── Work Mode ─────────────────────────────────────── */}
+        <Section label="Work Mode" defaultOpen={true}>
+          {[
+            { value:'',        label:'Any Mode'   },
+            { value:'Remote',  label:'🌐 Remote'  },
+            { value:'Hybrid',  label:'🏢 Hybrid'  },
+            { value:'On-site', label:'📍 On-site' },
+          ].map(o => (
+            <RadioOpt key={o.value} value={o.value} current={selectedWorkMode} onChange={setSelectedWorkMode} label={o.label} />
+          ))}
+        </Section>
+
+        {/* ── Country ───────────────────────────────────────── */}
+        <Section label="Country / Location" defaultOpen={true}>
+          <div className="relative">
+            <select value={selectedCountry} onChange={e => setSelectedCountry(e.target.value)}
+              className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] text-xs rounded-xl px-3 py-2.5 pr-8 outline-none focus:border-[#2563EB] transition-all cursor-pointer appearance-none">
+              <option value="">All Countries</option>
+              {countries.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+              <ChevronIcon open={false} />
+            </div>
+          </div>
+        </Section>
+
+        {/* ── Source ────────────────────────────────────────── */}
+        <Section label="Source" defaultOpen={false}>
+          <RadioOpt value="" current={selectedSource} onChange={setSelectedSource} label="All Sources" />
+          {ALL_SOURCES.map(src => {
+            const s = SOURCE_STYLES[src] ?? SOURCE_STYLES['InternPulse'];
+            return (
+              <label key={src} className="flex items-center gap-2.5 cursor-pointer py-0.5 group" onClick={() => setSelectedSource(src === selectedSource ? '' : src)}>
+                <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center transition-all shrink-0 ${
+                  selectedSource === src ? 'border-[#2563EB] bg-[#2563EB]' : 'border-[#CBD5E1] group-hover:border-[#2563EB]'
+                }`}>
+                  {selectedSource === src && (
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  )}
+                </div>
+                <span className="inline-flex items-center gap-1.5 text-xs cursor-pointer">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.dot }}/>
+                  <span className={selectedSource === src ? 'font-semibold text-[#0F172A]' : 'text-[#64748B] group-hover:text-[#0F172A]'}>{src}</span>
+                </span>
+              </label>
+            );
+          })}
+        </Section>
 
       </div>
     </div>
