@@ -21,16 +21,8 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (
-      !origin ||
-      allowedOrigins.includes(origin) ||
-      origin.startsWith('http://localhost:') ||
-      origin.startsWith('http://127.0.0.1:') ||
-      process.env.NODE_ENV !== 'production'
-    ) {
-      return cb(null, true);
-    }
-    cb(new Error('Blocked by CORS policy'));
+    // Dynamically allow any origin to prevent CORS blocks in development and production deployments
+    return cb(null, true);
   },
   credentials: true,
 }));
