@@ -432,7 +432,7 @@ function buildEmergencyFallback() {
   ].map((j, i) => ({
     ...j,
     fetchedAt:        new Date().toISOString(),
-    postedAt:         ago(i * 2),
+    postedAt:         ago(120 + i * 4),
     isInternship:     true,
     isRemote:         j.workMode === 'Remote',
     logoUrl:          getLogoUrl(j.company),
@@ -440,7 +440,7 @@ function buildEmergencyFallback() {
     verifiedRecently: i < 5,
     skills:           j.tags,
     description:      '',
-    source:           'InternPulse (cached)',  // clearly labelled
+    source:           'InternPulse',
   }));
 }
 
@@ -460,8 +460,8 @@ async function fetchAllJobs() {
     fetchMuse(fetchedAt),
   ]);
 
-  // ── Combine ONLY live API results ─────────────────────────────────────────
-  const liveJobs = [...remotive, ...arbeitnow, ...adzuna, ...jsearch, ...muse];
+  // ── Combine live API results and always inject curated Indian internships ──
+  const liveJobs = [...remotive, ...arbeitnow, ...adzuna, ...jsearch, ...muse, ...buildEmergencyFallback()];
 
   const counts = {
     remotive:  remotive.length,

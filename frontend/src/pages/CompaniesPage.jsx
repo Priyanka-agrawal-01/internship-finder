@@ -123,26 +123,64 @@ function FeaturedCarousel({ companies, onSelect }) {
 }
 
 // ─── Company card ─────────────────────────────────────────────────────────────
-function CompanyCard({ company, onSelect }) {
+function CompanyCard({ company, onSelect, isBookmarked, isApplied, onToggleBookmark, onToggleApplied }) {
   const sc = stipendColor(company.stipendMin);
   return (
     <div
-      className="job-card bg-white border border-[#E2E8F0] rounded-xl p-5 flex flex-col cursor-pointer"
+      className="job-card bg-white border border-[#E2E8F0] rounded-xl p-5 flex flex-col cursor-pointer relative group"
       style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
       onClick={() => onSelect(company)}
     >
+      {/* Action shortcuts */}
+      <div className="absolute top-4 right-4 flex items-center gap-1.5 z-10" onClick={e => e.stopPropagation()}>
+        <button
+          onClick={(e) => onToggleBookmark(company.id, e)}
+          className={`p-1.5 rounded-lg border transition-all duration-200 ${
+            isBookmarked
+              ? 'bg-amber-50 border-amber-200 text-amber-500 hover:bg-amber-100'
+              : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300'
+          }`}
+          title={isBookmarked ? "Remove from Interested" : "Mark as Interested"}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </button>
+        <button
+          onClick={(e) => onToggleApplied(company.id, e)}
+          className={`p-1.5 rounded-lg border transition-all duration-200 ${
+            isApplied
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100'
+              : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300'
+          }`}
+          title={isApplied ? "Mark as Not Applied" : "Mark as Applied"}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </button>
+      </div>
+
       {/* Top */}
-      <div className="flex items-start gap-3 mb-3">
+      <div className="flex items-start gap-3 mb-3 pr-16">
         <CompanyLogo name={company.name} color={company.color} size={44} />
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-bold text-[#0F172A] leading-tight">{company.name}</h3>
+          <h3 className="text-sm font-bold text-[#0F172A] leading-tight flex items-center gap-1.5">
+            {company.name}
+            {isApplied && (
+              <span className="inline-flex items-center text-[9px] font-extrabold px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">APPLIED</span>
+            )}
+          </h3>
           {company.domain && (
             <p className="text-[11px] text-[#94A3B8] mt-0.5 leading-snug">{company.domain}</p>
           )}
         </div>
-        {/* Stipend badge */}
+      </div>
+
+      {/* Stipend badge */}
+      <div className="mb-3">
         <span
-          className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-lg border whitespace-nowrap"
+          className="text-[11px] font-bold px-2.5 py-1 rounded-lg border whitespace-nowrap"
           style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}
         >
           {company.stipend}
@@ -188,8 +226,7 @@ function CompanyCard({ company, onSelect }) {
 }
 
 // ─── Modal ───────────────────────────────────────────────────────────────────
-// ─── Modal ───────────────────────────────────────────────────────────────────
-function CompanyModal({ company, tab, onClose }) {
+function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggleBookmark, onToggleApplied }) {
   if (!company) return null;
   const sc = stipendColor(company.stipendMin);
   const prep = getCompanyPrep(company.id, tab);
@@ -200,7 +237,7 @@ function CompanyModal({ company, tab, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm" />
       <div
-        className="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in"
         style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
         onClick={e => e.stopPropagation()}
       >
@@ -209,7 +246,37 @@ function CompanyModal({ company, tab, onClose }) {
           <div className="flex items-center gap-4">
             <CompanyLogo name={company.name} color={company.color} size={52} />
             <div>
-              <h2 className="text-lg font-bold text-[#0F172A]">{company.name}</h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-lg font-bold text-[#0F172A]">{company.name}</h2>
+                <div className="flex gap-1.5 mt-0.5">
+                  <button
+                    onClick={(e) => onToggleBookmark(company.id, e)}
+                    className={`px-2 py-0.5 text-[10px] font-bold border rounded-lg transition-all flex items-center gap-1 ${
+                      isBookmarked
+                        ? 'bg-amber-50 border-amber-200 text-amber-600'
+                        : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                    {isBookmarked ? 'Interested' : 'Interested'}
+                  </button>
+                  <button
+                    onClick={(e) => onToggleApplied(company.id, e)}
+                    className={`px-2 py-0.5 text-[10px] font-bold border rounded-lg transition-all flex items-center gap-1 ${
+                      isApplied
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    {isApplied ? 'Applied ✓' : 'Applied'}
+                  </button>
+                </div>
+              </div>
               {company.domain && <p className="text-xs text-[#94A3B8] mt-0.5">{company.domain}</p>}
             </div>
           </div>
@@ -251,7 +318,7 @@ function CompanyModal({ company, tab, onClose }) {
                 className="text-sm font-bold px-3 py-1.5 rounded-lg border inline-block"
                 style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}
               >
-                {company.stipend} / month
+                {company.stipend}
               </span>
             </div>
 
@@ -497,9 +564,8 @@ function CompanyModal({ company, tab, onClose }) {
   );
 }
 
-
 // ─── Filter chips ─────────────────────────────────────────────────────────────
-const IT_FILTERS  = ['All','Product-Based','Finance','Startup'];
+const IT_FILTERS  = ['All','Product-Based','Finance','Startup','AI/ML','Hardware'];
 const ECE_FILTERS = ['All','Semiconductor','VLSI','Embedded Systems','Networking','Telecommunications'];
 
 function FilterChips({ options, active, onChange }) {
@@ -530,14 +596,61 @@ export default function CompaniesPage() {
   const [filter,     setFilter]     = useState('All');
   const [modal,      setModal]      = useState(null);
 
+  // Bookmarks & Checklist States (persistent via localStorage)
+  const [bookmarked, setBookmarked] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ip_bookmarked_companies');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [applied, setApplied] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ip_applied_companies');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Pipeline Filter toggles
+  const [pipelineFilter, setPipelineFilter] = useState('all'); // 'all' | 'interested' | 'applied'
+
+  const toggleBookmark = (id, e) => {
+    if (e) e.stopPropagation();
+    const updated = bookmarked.includes(id)
+      ? bookmarked.filter(x => x !== id)
+      : [...bookmarked, id];
+    setBookmarked(updated);
+    localStorage.setItem('ip_bookmarked_companies', JSON.stringify(updated));
+  };
+
+  const toggleApplied = (id, e) => {
+    if (e) e.stopPropagation();
+    const updated = applied.includes(id)
+      ? applied.filter(x => x !== id)
+      : [...applied, id];
+    setApplied(updated);
+    localStorage.setItem('ip_applied_companies', JSON.stringify(updated));
+  };
+
   const baseList = tab === 'it' ? IT_COMPANIES : ECE_COMPANIES;
   const filterOptions = tab === 'it' ? IT_FILTERS : ECE_FILTERS;
 
   // Reset filter when switching tabs
-  const switchTab = (t) => { setTab(t); setFilter('All'); setSearch(''); };
+  const switchTab = (t) => { setTab(t); setFilter('All'); setSearch(''); setPipelineFilter('all'); };
 
   const displayed = useMemo(() => {
     let list = [...baseList];
+
+    // Pipeline filtering
+    if (pipelineFilter === 'interested') {
+      list = list.filter(c => bookmarked.includes(c.id));
+    } else if (pipelineFilter === 'applied') {
+      list = list.filter(c => applied.includes(c.id));
+    }
 
     // Search
     if (search.trim()) {
@@ -561,7 +674,7 @@ export default function CompaniesPage() {
     else list.sort((a, b) => a.name.localeCompare(b.name));
 
     return list;
-  }, [baseList, search, filter, sort]);
+  }, [baseList, search, filter, sort, pipelineFilter, bookmarked, applied]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -575,7 +688,7 @@ export default function CompaniesPage() {
               </div>
               <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">Companies Directory</h1>
               <p className="text-[#64748B] mt-2 max-w-xl">
-                Browse {IT_COMPANIES.length + ECE_COMPANIES.length} verified companies with stipend ranges, hiring locations, and direct career links.
+                Browse verified companies with stipend ranges, hiring locations, and direct career links. Track your applications and bookmarks in real-time.
               </p>
             </div>
             {/* Tab switcher */}
@@ -611,6 +724,45 @@ export default function CompaniesPage() {
 
         {/* Stats */}
         <StatsBar companies={baseList} tab={tab} />
+
+        {/* Pipeline Quick Tracker Overview */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+          <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 flex items-center justify-between shadow-sm">
+            <div>
+              <p className="text-xs font-semibold text-[#64748B]">My Pipeline</p>
+              <h4 className="text-lg font-bold text-[#0F172A] mt-0.5">Tracker Dashboard</h4>
+            </div>
+            <span className="text-2xl">📋</span>
+          </div>
+          <button
+            onClick={() => setPipelineFilter(pipelineFilter === 'interested' ? 'all' : 'interested')}
+            className={`border rounded-xl p-4 flex items-center justify-between shadow-sm transition-all text-left ${
+              pipelineFilter === 'interested'
+                ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-400/20'
+                : 'bg-white border-[#E2E8F0] hover:border-amber-300'
+            }`}
+          >
+            <div>
+              <p className="text-xs font-semibold text-[#64748B]">Interested Companies</p>
+              <h4 className="text-lg font-bold text-[#D97706] mt-0.5">{bookmarked.length} bookmarked</h4>
+            </div>
+            <span className="text-xl">⭐</span>
+          </button>
+          <button
+            onClick={() => setPipelineFilter(pipelineFilter === 'applied' ? 'all' : 'applied')}
+            className={`border rounded-xl p-4 flex items-center justify-between shadow-sm transition-all text-left col-span-2 sm:col-span-1 ${
+              pipelineFilter === 'applied'
+                ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-400/20'
+                : 'bg-white border-[#E2E8F0] hover:border-[#emerald-300]'
+            }`}
+          >
+            <div>
+              <p className="text-xs font-semibold text-[#64748B]">Applications Submitted</p>
+              <h4 className="text-lg font-bold text-emerald-700 mt-0.5">{applied.length} applied</h4>
+            </div>
+            <span className="text-xl">📝</span>
+          </button>
+        </div>
 
         {/* Featured carousel */}
         <FeaturedCarousel companies={baseList} onSelect={setModal} />
@@ -656,6 +808,43 @@ export default function CompaniesPage() {
               <span className="text-xs font-semibold text-[#64748B] shrink-0">Filter:</span>
               <FilterChips options={filterOptions} active={filter} onChange={setFilter} />
             </div>
+
+            {/* Pipeline Status Filter */}
+            <div className="flex items-center gap-2 pt-2 border-t border-[#F1F5F9] flex-wrap">
+              <span className="text-xs font-semibold text-[#64748B] shrink-0">Pipeline:</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPipelineFilter('all')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold border ${
+                    pipelineFilter === 'all'
+                      ? 'bg-slate-800 text-white border-slate-800'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-350'
+                  }`}
+                >
+                  All Companies
+                </button>
+                <button
+                  onClick={() => setPipelineFilter('interested')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold border flex items-center gap-1 ${
+                    pipelineFilter === 'interested'
+                      ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                      : 'bg-white text-amber-600 border-slate-200 hover:border-amber-300'
+                  }`}
+                >
+                  ⭐ Interested ({bookmarked.length})
+                </button>
+                <button
+                  onClick={() => setPipelineFilter('applied')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold border flex items-center gap-1 ${
+                    pipelineFilter === 'applied'
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                      : 'bg-white text-emerald-700 border-slate-200 hover:border-emerald-300'
+                  }`}
+                >
+                  📝 Applied ({applied.length})
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -664,8 +853,8 @@ export default function CompaniesPage() {
           <p className="text-sm text-[#64748B]">
             Showing <span className="font-bold text-[#0F172A]">{displayed.length}</span> of {baseList.length} companies
           </p>
-          {(search || filter !== 'All') && (
-            <button onClick={() => { setSearch(''); setFilter('All'); }} className="text-xs font-semibold text-[#2563EB] hover:text-[#1D4ED8]">
+          {(search || filter !== 'All' || pipelineFilter !== 'all') && (
+            <button onClick={() => { setSearch(''); setFilter('All'); setPipelineFilter('all'); }} className="text-xs font-semibold text-[#2563EB] hover:text-[#1D4ED8]">
               Clear filters
             </button>
           )}
@@ -673,22 +862,40 @@ export default function CompaniesPage() {
 
         {/* Grid */}
         {displayed.length === 0 ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-12 text-center">
+          <div className="bg-white border border-[#E2E8F0] rounded-xl p-12 text-center shadow-sm animate-fade-in">
             <div className="text-4xl mb-3">🔍</div>
             <h3 className="font-bold text-[#0F172A] mb-1">No companies found</h3>
-            <p className="text-sm text-[#64748B]">Try a different search or filter.</p>
+            <p className="text-sm text-[#64748B]">Try adjusting your filters or search terms.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {displayed.map(c => (
-              <CompanyCard key={c.id} company={c} onSelect={setModal} />
+              <CompanyCard
+                key={c.id}
+                company={c}
+                onSelect={setModal}
+                isBookmarked={bookmarked.includes(c.id)}
+                isApplied={applied.includes(c.id)}
+                onToggleBookmark={toggleBookmark}
+                onToggleApplied={toggleApplied}
+              />
             ))}
           </div>
         )}
       </div>
 
       {/* Modal */}
-      {modal && <CompanyModal company={modal} tab={tab} onClose={() => setModal(null)} />}
+      {modal && (
+        <CompanyModal
+          company={modal}
+          tab={tab}
+          onClose={() => setModal(null)}
+          isBookmarked={bookmarked.includes(modal.id)}
+          isApplied={applied.includes(modal.id)}
+          onToggleBookmark={toggleBookmark}
+          onToggleApplied={toggleApplied}
+        />
+      )}
     </div>
   );
 }

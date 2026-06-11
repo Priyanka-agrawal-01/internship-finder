@@ -30,10 +30,12 @@ const XIcon = () => (
 
 /* ─── Nav config ─────────────────────────────────────────────────────────────── */
 const NAV_LINKS = [
-  { label: 'Jobs',       page: 'home'      },
+  { label: 'Home',       page: 'home'       },
+  { label: 'Jobs',       page: 'jobs'       },
   { label: 'Companies',  page: 'companies', badge: '77' },
   { label: 'Resources',  page: 'resources'  },
   { label: 'Blog',       page: 'blog'       },
+  { label: 'Alerts',     page: 'alerts'     },
   { label: 'About',      page: 'about'      },
 ];
 
@@ -93,9 +95,6 @@ export default function Navbar({ jobsCount = 0, currentPage = 'home', onNavigate
             <button onClick={onSubscribeClick}
               className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg transition-colors duration-150">
               Get Alerts
-            </button>
-            <button className="rounded-full p-0.5 hover:bg-[#F1F5F9] transition-colors">
-              <UserCircleIcon />
             </button>
           </div>
 

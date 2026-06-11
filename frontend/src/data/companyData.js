@@ -1,5 +1,44 @@
 // Curated database for Indian companies
 export const companyDatabase = {
+  OpenAI: {
+    description: "OpenAI is an AI research and deployment company. Our mission is to ensure that artificial general intelligence benefits all of humanity.",
+    linkedin: "https://www.linkedin.com/company/openai/",
+    unstop: "https://unstop.com/c/openai",
+    internshala: "https://internshala.com/internships/matching-openai",
+    naukri: "https://www.naukri.com/openai-jobs-careers",
+    resumeTips: [
+      "Showcase deep expertise in deep learning, machine learning, and training large language models.",
+      "Highlight custom implementations of algorithms (Transformers, CNNs) from scratch in PyTorch.",
+      "Demonstrate knowledge of high-performance systems programming (CUDA, C++, Python, GPU kernels).",
+      "Mention any academic publications, research contributions, or highly complex open-source AI projects."
+    ]
+  },
+  SpaceX: {
+    description: "SpaceX designs, manufactures and launches advanced rockets and spacecraft. The company was founded in 2002 to revolutionize space technology.",
+    linkedin: "https://www.linkedin.com/company/spacex/",
+    unstop: "https://unstop.com/c/spacex",
+    internshala: "https://internshala.com/internships/matching-spacex",
+    naukri: "https://www.naukri.com/spacex-jobs-careers",
+    resumeTips: [
+      "Highlight hands-on fabrication, CAD modeling (SolidWorks/NX), and hardware testing experience.",
+      "Show projects building real-time systems, flight controls, embedded C/C++, or telemetry pipelines.",
+      "Emphasize raw problem-solving capability, high work ethic, and ability to thrive under pressure.",
+      "Include participation in engineering competition teams like Formula SAE, Hyperloop, or Rocketry."
+    ]
+  },
+  Meta: {
+    description: "Meta builds technologies that help people connect, find communities, and grow businesses. Meta is moving beyond 2D screens toward immersive experiences like AR and VR.",
+    linkedin: "https://www.linkedin.com/company/meta/",
+    unstop: "https://unstop.com/c/meta",
+    internshala: "https://internshala.com/internships/matching-meta",
+    naukri: "https://www.naukri.com/meta-jobs-careers",
+    resumeTips: [
+      "Demonstrate solid mastery of data structures, graph algorithms, and dynamic programming.",
+      "Showcase projects operating at scale, dealing with heavy database querying or distributed systems.",
+      "Highlight frontend mastery (React, JavaScript/TypeScript) or advanced backend services.",
+      "Quantify metrics showing system performance optimizations or large user-base projects."
+    ]
+  },
   Google: {
     description: "Google India is a premier branch of Google LLC, focusing on AI, search engines, cloud computing, and hardware engineering across major campuses in Bangalore, Hyderabad, Pune, and Gurgaon.",
     linkedin: "https://www.linkedin.com/company/google/",

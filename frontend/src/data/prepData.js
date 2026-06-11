@@ -15,6 +15,111 @@ const H = 'high', M = 'medium', L = 'low';
 // ─── IT Companies ─────────────────────────────────────────────────────────────
 export const IT_PREP = {
 
+  openai: {
+    resumeStrategy: {
+      preferredLength: '1 page (strictly enforced)',
+      preferredProjects: ['Custom Transformer/LLM training pipelines', 'CUDA/GPU kernel optimizations', 'Reinforcement learning environments', 'Research paper implementations'],
+      keySkills: ['PyTorch', 'Python', 'C++', 'CUDA', 'Triton', 'Distributed Systems', 'Deep Learning', 'NLP'],
+      bulletExamples: [
+        'Implemented a custom distributed training loop in PyTorch, reducing memory footprint by 25% for a 7B parameter model.',
+        'Wrote a high-performance Triton GPU kernel for custom attention mechanism, achieving 1.8x speedup over PyTorch baseline.',
+        'Built an RLHF reinforcement learning pipeline using PPO, scaling agent evaluations to 50k episodes/day.'
+      ],
+      commonMistakes: [
+        'Vague machine learning experience without understanding model internals',
+        'Not knowing how backpropagation or attention mechanisms work mathematically',
+        'No systems or CUDA optimization experience for technical engineering roles'
+      ]
+    },
+    skills: {
+      frontend:     { level: L, note: 'Minimal focus unless applying specifically to UI roles' },
+      backend:      { level: H, note: 'High scale APIs and model deployment infrastructures' },
+      dsa:          { level: H, note: 'Standard coding rounds required' },
+      database:     { level: M, note: 'Distributed caching and data ingestion pipelines' },
+      cloud:        { level: H, note: 'High performance computing (HPC) clusters and Kubernetes' },
+      devops:       { level: M, note: 'Infrastructure as code for massive compute training runs' },
+      systemDesign: { level: H, note: 'High-scale distributed systems and data pipelines' },
+    },
+    interviewFocus: ['Deep Learning & Transformer Architecture', 'Systems Programming & GPU Optimization', 'Distributed Training & Scalability', 'Advanced DSA', 'Math & Backpropagation fundamentals'],
+    hiringProcess: ['Resume Screen', 'Technical Phone Screen (DSA + ML Systems)', 'Take-home Assignment or Coding Round', 'Virtual On-site (4-5 rounds: Coding, ML Systems, Research presentation)', 'Team Matching'],
+    projectIdeas: [
+      { title: 'Transformer from Scratch', why: 'Builds intuition on self-attention and tensor operations' },
+      { title: 'Custom GPU Triton/CUDA Kernel', why: 'Demonstrates deep low-level understanding of hardware limits' },
+      { title: 'Distributed Model Evaluator', why: 'Scalable parallel model benchmark testing pipeline' }
+    ],
+    scorecard: ['Write custom attention and autograd engines', 'Optimize GPU training runs (mixed precision, ZeRO)', 'Solve LeetCode Medium/Hard systems questions', 'Read key OpenAI research papers (GPT series, InstructGPT)']
+  },
+
+  spacex: {
+    resumeStrategy: {
+      preferredLength: '1 page',
+      preferredProjects: ['Microcontroller systems', 'Real-time telemetry software', 'Autonomous flight path planners', 'Formula Student or Rocketry team work'],
+      keySkills: ['C', 'C++', 'Python', 'RTOS', 'Linux Kernel', 'Avionics', 'Control Systems', 'MATLAB/Simulink'],
+      bulletExamples: [
+        'Developed a real-time flight telemetry dashboard in C++ processing 10k messages/sec over UDP with zero packet loss.',
+        'Configured FreeRTOS on STM32 microcontroller to poll and log 12 sensor modules at 200Hz.',
+        'Designed Avionics flight software handling state-machine transitions from launch to landing simulation.'
+      ],
+      commonMistakes: [
+        'Too theoretical — lack of hands-on electronics or embedded testing',
+        'Not understanding thread safety, race conditions, or memory leaks in C/C++',
+        'Not quantifying code constraints (memory limits, latency requirements)'
+      ]
+    },
+    skills: {
+      frontend:     { level: L, note: 'Used mostly for internal telemetry tools' },
+      backend:      { level: H, note: 'High-reliability services, APIs, and data ingestion' },
+      dsa:          { level: H, note: 'Strong algorithmic skills for real-time applications' },
+      database:     { level: M, note: 'Time-series databases for flight telemetry logs' },
+      cloud:        { level: L, note: 'On-premise hardware testing is prioritized' },
+      devops:       { level: M, note: 'Continuous integration for firmware builds' },
+      systemDesign: { level: H, note: 'Fault-tolerant distributed architectures for control loops' },
+    },
+    interviewFocus: ['Embedded C/C++ & Memory Management', 'Real-time Operating Systems (RTOS)', 'Concurrencies, Locks & Threading', 'Basic Physics & Mechanics', 'System Fault-Tolerance & Redundancy'],
+    hiringProcess: ['Application Review', 'Technical Phone Interview', 'On-site Practical Lab Test / Presentation', '3-4 Engineering Panel Rounds', 'Leadership / Manager Round'],
+    projectIdeas: [
+      { title: 'RTOS-based Telemetry Receiver', why: 'Shows practical understanding of scheduling and thread priorities' },
+      { title: 'Autonomous Rocket Landing Simulator', why: 'Shows control system theory, math, and physics modeling' },
+      { title: 'Low-latency C++ UDP Server', why: 'Demonstrates high-performance networking and buffer safety' }
+    ],
+    scorecard: ['Build physical embedded projects on STM32/ESP32', 'Write modular, memory-safe, clean C/C++ code', 'Understand PID controllers and state-space models', 'Practice writing custom multithreaded apps']
+  },
+
+  meta: {
+    resumeStrategy: {
+      preferredLength: '1 page',
+      preferredProjects: ['Full stack React apps', 'Distributed caching layers', 'GraphQL APIs', 'Open-source libraries'],
+      keySkills: ['React', 'TypeScript', 'PHP/Hack', 'Python', 'C++', 'GraphQL', 'System Design', 'Algorithms'],
+      bulletExamples: [
+        'Built a real-time collaborative workspace using React and WebSockets, reducing socket load by 30%.',
+        'Implemented a distributed GraphQL caching pipeline, improving response times by 150ms on average.',
+        'Optimized database indexing and queries, decreasing server CPU utilization by 15% under peak traffic.'
+      ],
+      commonMistakes: [
+        'Vague frontend work without demonstrating architectural design',
+        'Resume lacking quantification and product metrics (CTR, latency, page-load speed)',
+        'Lack of performance focus in React apps'
+      ]
+    },
+    skills: {
+      frontend:     { level: H, note: 'Creators of React — high expectations for frontend architecture' },
+      backend:      { level: H, note: 'Hack/PHP, Python, and C++ for low-latency backend systems' },
+      dsa:          { level: H, note: 'Primary test criteria — quick, optimal solutions expected' },
+      database:     { level: H, note: 'Large-scale relational database systems and caching' },
+      cloud:        { level: M, note: 'Mostly internal custom servers, but AWS/GCP concepts apply' },
+      devops:       { level: L, note: 'Handled by dedicated infrastructure teams' },
+      systemDesign: { level: H, note: 'High concurrency, routing, load-balancing, and caching' },
+    },
+    interviewFocus: ['Advanced DSA (Trees, Graphs, DP)', 'System Design at Scale (Cache, CDN, Sharding)', 'Web Performance & Frontend Architecture', 'STAR Behavioral (Collaboration, Impact)', 'Product design thinking'],
+    hiringProcess: ['Resume Screen', 'Technical Phone Interview (1-2 DSA rounds)', 'On-site (2 DSA rounds + 1 System Design + 1 Behavioral)', 'Team Matching'],
+    projectIdeas: [
+      { title: 'Real-time Chat with WebSockets', why: 'Demonstrates concurrency, sockets, and client-state synchronization' },
+      { title: 'Distributed LRU Cache', why: 'Core backend scaling concept — shows low-level system design' },
+      { title: 'Mock Social Network Graph API', why: 'Uses complex database relationships and optimized queries' }
+    ],
+    scorecard: ['Solve 150+ LeetCode Medium/Hard questions', 'Master React state management and rendering optimizations', 'Read Meta engineering blog on caching and infra', 'Practice quick coding under 30 minutes']
+  },
+
   google: {
     resumeStrategy: {
       preferredLength: '1 page (strictly enforced for < 5 years experience)',

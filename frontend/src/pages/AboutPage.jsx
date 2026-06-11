@@ -103,12 +103,12 @@ export default function AboutPage() {
                   className="flex items-center gap-2.5 px-3 py-2.5 bg-[#0F172A] text-white rounded-xl text-xs font-semibold hover:bg-[#1E293B] transition-colors">
                   <GithubIcon /> GitHub
                 </a>
-                <a href="https://www.linkedin.com/in/priyanka-agrawal"
+                <a href="https://www.linkedin.com/in/priyanka-agrawal01"
                   target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-2.5 px-3 py-2.5 bg-[#0A66C2] text-white rounded-xl text-xs font-semibold hover:bg-[#0950A0] transition-colors">
                   <LinkedinIcon /> LinkedIn
                 </a>
-                <a href="mailto:priyanka@internpulse.co"
+                <a href="mailto:priyankaagrawalofficial01@gmail.com"
                   className="flex items-center gap-2.5 px-3 py-2.5 border border-[#E2E8F0] text-[#0F172A] rounded-xl text-xs font-semibold hover:border-[#2563EB] hover:text-[#2563EB] transition-colors bg-white">
                   <MailIcon /> Email Me
                 </a>

@@ -36,11 +36,23 @@ router.post('/', async (req, res) => {
 
   // ── 2. Sanitise preferences ────────────────────────────────────────────────
   const prefs = {
-    itCompanies:     preferences.itCompanies    !== false,
-    eceCompanies:    preferences.eceCompanies   === true,
-    internshipsOnly: preferences.internshipsOnly !== false,
-    companies:       Array.isArray(preferences.companies) ? preferences.companies.slice(0, 10) : [],
-    roles:           Array.isArray(preferences.roles)     ? preferences.roles.slice(0, 10)     : [],
+    itCompanies:       preferences.itCompanies       === true,
+    eceCompanies:      preferences.eceCompanies      === true,
+    remoteInternships: preferences.remoteInternships === true,
+    productCompanies:  preferences.productCompanies  === true,
+    startups:          preferences.startups          === true,
+    aiMlRoles:         preferences.aiMlRoles         === true,
+    frontendRoles:     preferences.frontendRoles     === true,
+    backendRoles:      preferences.backendRoles      === true,
+    vlsiRoles:         preferences.vlsiRoles         === true,
+    embeddedRoles:     preferences.embeddedRoles     === true,
+    frequency:         ['instant', '6hours', 'daily'].includes(preferences.frequency) ? preferences.frequency : '6hours',
+    locations:         Array.isArray(preferences.locations) ? preferences.locations : [],
+    
+    // Legacy support
+    companies:         Array.isArray(preferences.companies) ? preferences.companies.slice(0, 10) : [],
+    roles:             Array.isArray(preferences.roles)     ? preferences.roles.slice(0, 10)     : [],
+    internshipsOnly:   preferences.internshipsOnly          !== false,
   };
 
   // ── 3. Persist subscriber ──────────────────────────────────────────────────
@@ -109,18 +121,15 @@ router.post('/', async (req, res) => {
     }
   }
 
-  // ── 4. Send welcome email (non-blocking on failure) ────────────────────────
-  let previewUrl = null;
-  try {
-    console.log('[Subscribe] Sending welcome email...');
-    const result = await emailSvc.sendWelcomeEmail(cleanEmail, prefs, unsubscribeToken);
-    previewUrl   = result?.previewUrl || null;
-    console.log(`[Subscribe] Welcome email sent successfully to ${cleanEmail}`);
-  } catch (emailErr) {
-    // Log the error but DO NOT let it prevent the success response
-    console.error(`[Subscribe] Welcome email failed for ${cleanEmail}: ${emailErr.message}`);
-    // Continue to return success — subscription WAS saved
-  }
+  // ── 4. Send welcome email (non-blocking background task) ──────────────────
+  console.log('[Subscribe] Dispatching welcome email in the background...');
+  emailSvc.sendWelcomeEmail(cleanEmail, prefs, unsubscribeToken)
+    .then(result => {
+      console.log(`[Subscribe] Welcome email sent successfully to ${cleanEmail} (msgId: ${result?.messageId || 'N/A'})`);
+    })
+    .catch(emailErr => {
+      console.error(`[Subscribe] Welcome email failed for ${cleanEmail}: ${emailErr.message}`);
+    });
 
   // ── 5. Always return a response ────────────────────────────────────────────
   console.log(`[Subscribe] Sending 200 response to ${cleanEmail}`);
@@ -129,7 +138,6 @@ router.post('/', async (req, res) => {
     message: isNew
       ? 'Successfully subscribed! Check your inbox for a welcome email.'
       : 'Your preferences have been updated.',
-    previewUrl,
   });
 });
 

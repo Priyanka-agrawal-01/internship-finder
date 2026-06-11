@@ -8,8 +8,15 @@ import CompaniesPage  from './pages/CompaniesPage';
 import ResourcesPage  from './pages/ResourcesPage';
 import BlogPage       from './pages/BlogPage';
 import AboutPage      from './pages/AboutPage';
+import AlertsPage     from './pages/AlertsPage';
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const getBackendUrl = () => {
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost:5000';
+  }
+  return import.meta.env.VITE_API_URL || 'http://localhost:5000';
+};
+const BACKEND_URL = getBackendUrl();
 
 /* ─── Popular companies list (right sidebar) ──────── */
 const POPULAR_COMPANIES = [
@@ -39,6 +46,18 @@ const TOP_COMPANIES = [
   { name:'Atlassian',   stipend:'₹80K–1.1L/mo', color:'#0052CC', icon:'A'  },
   { name:'Adobe',       stipend:'₹75K–1L/mo',   color:'#FF0000', icon:'Ad' },
 ];
+
+const ECE_COMPANIES_SET = new Set([
+  'Qualcomm','Intel','AMD','Cadence','Synopsys','Broadcom',
+  'Texas Instruments','Marvell','MediaTek','Nokia','Ericsson',
+  'Samsung Semiconductors','Micron Technology','NXP Semiconductors',
+  'STMicroelectronics','Infineon Technologies','Renesas','Keysight Technologies',
+  'National Instruments','Analog Devices','Lam Research','Applied Materials',
+  'ASML','NVIDIA','ARM Holdings','Bosch','Siemens','Honeywell','Rockwell Automation',
+  'ABB','Emerson','Schneider Electric','GE Digital','L&T Technology Services',
+  'Tata Elxsi','KPIT Technologies','Continental','Harman','Visteon','Aptiv',
+  'Mphasis','Zensar Technologies','Cyient','LTTS', 'Texas Instruments'
+]);
 
 /* ─── StatsSection ──────────────────────────────────── */
 function StatsSection({ jobsCount, companiesCount, countriesCount }) {
@@ -263,6 +282,19 @@ export default function App() {
   const [countriesList,    setCountriesList]    = useState([]);
 
   const [currentPage, setCurrentPage] = useState('home');
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [mobileCompanyOpen, setMobileCompanyOpen] = useState(false);
+
+  useEffect(() => {
+    if (currentPage === 'jobs') {
+      document.body.classList.add('overflow-hidden');
+    } else {
+      document.body.classList.remove('overflow-hidden');
+    }
+    return () => {
+      document.body.classList.remove('overflow-hidden');
+    };
+  }, [currentPage]);
 
   const subscribeRef = useRef(null);
   const jobsRef      = useRef(null);
@@ -280,8 +312,8 @@ export default function App() {
         setCacheStatus(res.data.cacheStatus ?? null);
         setLastRefresh(new Date().toISOString());
 
-        // Build countries list from live jobs
-        const countries = [...new Set(list.map(j => j.country).filter(Boolean))].sort();
+        // Build countries list from live jobs, ensuring India and Remote are always options
+        const countries = [...new Set(['India', 'Remote', ...list.map(j => j.country).filter(Boolean)])].sort();
         setCountriesList(countries);
       } else throw new Error('Unsuccessful response');
     } catch (err) {
@@ -385,10 +417,7 @@ export default function App() {
         jobsCount={jobs.length}
         currentPage={currentPage}
         onNavigate={setCurrentPage}
-        onSubscribeClick={() => {
-          if (currentPage !== 'home') { setCurrentPage('home'); setTimeout(() => subscribeRef.current?.scrollIntoView({ behavior: 'smooth' }), 100); }
-          else subscribeRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }}
+        onSubscribeClick={() => setCurrentPage('alerts')}
       />
 
       {/* ── PAGE ROUTING ─── */}
@@ -396,6 +425,7 @@ export default function App() {
       {currentPage === 'resources' && <ResourcesPage />}
       {currentPage === 'blog'      && <BlogPage />}
       {currentPage === 'about'     && <AboutPage />}
+      {currentPage === 'alerts'    && <AlertsPage />}
 
       {/* ── HOME CONTENT ───────────────────────────────── */}
       {currentPage === 'home' && (
@@ -406,6 +436,7 @@ export default function App() {
         countriesCount={countriesList.length || undefined}
       />
       <TopPayingCompanies onNavigate={setCurrentPage} />
+      
       {/* ── HERO ─────────────────────────────────────── */}
       <section className="bg-white border-b border-[#E2E8F0]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 md:py-20">
@@ -429,13 +460,13 @@ export default function App() {
 
               <div className="flex flex-wrap gap-3">
                 <button
-                  onClick={scrollToJobs}
+                  onClick={() => setCurrentPage('jobs')}
                   className="px-6 py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-xl transition-colors"
                 >
                   Browse Internships
                 </button>
                 <button
-                  onClick={() => subscribeRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                  onClick={() => setCurrentPage('alerts')}
                   className="px-6 py-3 bg-white hover:bg-[#F8FAFC] text-[#0F172A] font-semibold border border-[#E2E8F0] rounded-xl transition-colors"
                 >
                   Get Alerts
@@ -465,179 +496,6 @@ export default function App() {
           </div>
         </div>
       </section>
-
-      {/* ── MAIN CONTENT ─────────────────────────────── */}
-      <main ref={jobsRef} id="jobs" className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_260px] gap-6 items-start">
-
-          {/* ── LEFT SIDEBAR: Filters ── */}
-          <aside>
-            <SearchFilter
-              searchTerm={searchTerm}           setSearchTerm={setSearchTerm}
-              companySearch={companySearch}     setCompanySearch={setCompanySearch}
-              skillsSearch={skillsSearch}       setSkillsSearch={setSkillsSearch}
-              selectedSource={selectedSource}   setSelectedSource={setSelectedSource}
-              selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry}
-              selectedWorkMode={selectedWorkMode} setSelectedWorkMode={setSelectedWorkMode}
-              jobType={jobType}                 setJobType={setJobType}
-              countries={countriesList}
-              onReset={handleReset}
-              activeFilterCount={activeFilterCount}
-            />
-          </aside>
-
-          {/* ── CENTER: Jobs ── */}
-          <section>
-            {/* ── Feed header ──────────────────────────────── */}
-            {!loading && !error && (
-              <div className="bg-white rounded-2xl border border-[#E2E8F0] px-5 py-4 mb-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div>
-                    <h2 className="text-base font-bold text-[#0F172A]">🔍 Internship Discovery Feed</h2>
-                    <p className="text-xs text-[#64748B] mt-0.5">
-                      Aggregated from <span className="font-semibold text-[#0F172A]">Remotive · Arbeitnow · JSearch · The Muse · Adzuna</span>
-                      {cacheStatus && <> · <span className="text-[#22C55E] font-semibold">{cacheStatus.jobCount} cached</span></>}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {lastRefresh && (
-                      <span className="text-[11px] text-[#94A3B8]">
-                        {new Date(lastRefresh).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}
-                      </span>
-                    )}
-                    <button onClick={() => fetchJobs(false)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] rounded-lg transition-colors">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
-                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
-                      </svg>
-                      Refresh
-                    </button>
-                    {activeFilterCount > 0 && (
-                      <button onClick={handleReset}
-                        className="px-3 py-1.5 text-xs font-semibold text-[#EA580C] bg-[#FFF7ED] border border-[#FED7AA] rounded-lg transition-colors">
-                        ✕ Clear {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {/* Source pills */}
-                <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-[#F1F5F9]">
-                  {[
-                    { name:'Remotive',    bg:'#FDF4FF', text:'#9333EA', border:'#E9D5FF' },
-                    { name:'Arbeitnow',   bg:'#F0FDF4', text:'#16A34A', border:'#BBF7D0' },
-                    { name:'The Muse',    bg:'#FFF1F2', text:'#E11D48', border:'#FECDD3' },
-                    { name:'Adzuna',      bg:'#FFF7ED', text:'#EA580C', border:'#FED7AA' },
-                    { name:'JSearch',                  bg:'#ECFDF5', text:'#059669', border:'#A7F3D0' },
-                    { name:'InternPulse (cached)', bg:'#EFF6FF', text:'#2563EB', border:'#BFDBFE' },
-                  ].map(s => (
-                    <button key={s.name}
-                      onClick={() => setSelectedSource(s.name === selectedSource ? '' : s.name)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all"
-                      style={{
-                        background: s.name === selectedSource ? s.text : s.bg,
-                        color: s.name === selectedSource ? 'white' : s.text,
-                        borderColor: s.border,
-                      }}>
-                      <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: s.name === selectedSource ? 'white' : s.text }}/>
-                      {s.name}
-                    </button>
-                  ))}
-                  <span className="text-[11px] text-[#94A3B8] self-center ml-1">· Refreshes every 30 min</span>
-                </div>
-              </div>
-            )}
-
-            {/* Sort bar */}
-            {!loading && !error && filteredJobs.length > 0 && (
-              <SortBar count={filteredJobs.length} sort={sort} setSort={setSort} />
-            )}
-
-            {/* Loading skeletons */}
-            {loading && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
-              </div>
-            )}
-
-            {/* Error */}
-            {!loading && error && (
-              <div className="bg-white rounded-card border border-red-100 p-10 text-center" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                </div>
-                <h3 className="font-bold text-[#0F172A] mb-1">Connection Error</h3>
-                <p className="text-sm text-[#64748B] mb-5">{error}</p>
-                <button
-                  onClick={fetchJobs}
-                  className="px-5 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-sm font-semibold rounded-xl transition-colors"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            {/* No results */}
-            {!loading && !error && filteredJobs.length === 0 && (
-              <div className="bg-white rounded-card border border-[#E2E8F0] p-12 text-center" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                <div className="text-4xl mb-3">🔍</div>
-                <h3 className="font-bold text-[#0F172A] mb-1">No results found</h3>
-                <p className="text-sm text-[#64748B] mb-5">Try adjusting your filters or search term.</p>
-                <button
-                  onClick={handleReset}
-                  className="px-4 py-2 border border-[#E2E8F0] hover:border-[#2563EB] text-[#2563EB] text-sm font-semibold rounded-xl transition-colors"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            )}
-
-            {/* Job cards grid */}
-            {!loading && !error && filteredJobs.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {filteredJobs.map((job) => (
-                  <JobCard key={job.id} job={job} />
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* ── RIGHT SIDEBAR ── */}
-          <aside className="space-y-5 lg:sticky lg:top-20">
-
-            {/* Popular Companies */}
-            <div id="companies" className="bg-white rounded-card border border-[#E2E8F0] p-5" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-              <h3 className="text-sm font-bold text-[#0F172A] mb-3">Popular Companies</h3>
-              <div className="divide-y divide-[#F1F5F9] -mx-1">
-                {POPULAR_COMPANIES.map((c) => (
-                  <CompanyPill key={c.name} name={c.name} color={c.color} />
-                ))}
-              </div>
-              <button
-                onClick={() => setCurrentPage('companies')}
-                className="mt-3 w-full text-xs font-semibold text-[#2563EB] hover:text-[#1D4ED8] transition-colors"
-              >
-                View company guide →
-              </button>
-            </div>
-
-            {/* Newsletter */}
-            <div ref={subscribeRef}>
-              <SubscribeForm backendUrl={BACKEND_URL} />
-            </div>
-
-            {/* Quick tip card */}
-            <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-card p-4">
-              <p className="text-xs font-bold text-[#2563EB] mb-1">💡 Pro Tip</p>
-              <p className="text-xs text-[#1E40AF] leading-relaxed">
-                Click <strong>Info</strong> on any job card to see resume requirements and direct links to LinkedIn, Internshala, Naukri & Unstop.
-              </p>
-            </div>
-          </aside>
-        </div>
-      </main>
 
       {/* ── TRUST STRIP ──────────────────────────────── */}
       <section className="bg-white border-t border-[#E2E8F0] py-14">
@@ -680,6 +538,305 @@ export default function App() {
         </div>
       </footer>
       </>
+      )}
+
+      {/* ── JOBS INTERACTIVE 3-COLUMN DASHBOARD ────────────────── */}
+      {currentPage === 'jobs' && (
+        <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-[#F8FAFC]">
+          
+          {/* Mobile Sticky Action Bar */}
+          <div className="sticky top-0 z-40 bg-white border-b border-[#E2E8F0] px-4 py-2.5 flex items-center justify-between gap-2 lg:hidden shrink-0">
+            <button
+              onClick={() => setMobileFilterOpen(true)}
+              className="flex-1 py-2 px-3 border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#334155] bg-white hover:bg-[#F8FAFC] flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <span>🔍</span> Filters {activeFilterCount > 0 && <span className="ml-1 bg-[#2563EB] text-white rounded-full px-1.5 py-0.5 text-[9px] font-bold">{activeFilterCount}</span>}
+            </button>
+            <button
+              onClick={() => setMobileCompanyOpen(true)}
+              className="flex-1 py-2 px-3 border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#334155] bg-white hover:bg-[#F8FAFC] flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <span>🏢</span> Companies
+            </button>
+            <button
+              onClick={() => setCurrentPage('alerts')}
+              className="flex-1 py-2 px-3 border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#334155] bg-white hover:bg-[#F8FAFC] flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <span>🔔</span> Alerts
+            </button>
+          </div>
+
+          {/* Grid Layout Container */}
+          <div className="flex flex-1 overflow-hidden h-full">
+            
+            {/* 1. LEFT SIDEBAR: Filters (Fixed width, independent scroll) */}
+            <aside className="w-[280px] shrink-0 border-r border-[#E2E8F0] bg-white overflow-y-auto scrollbar-thin p-4 hidden lg:block h-full">
+              <SearchFilter
+                searchTerm={searchTerm}           setSearchTerm={setSearchTerm}
+                companySearch={companySearch}     setCompanySearch={setCompanySearch}
+                skillsSearch={skillsSearch}       setSkillsSearch={setSkillsSearch}
+                selectedSource={selectedSource}   setSelectedSource={setSelectedSource}
+                selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry}
+                selectedWorkMode={selectedWorkMode} setSelectedWorkMode={setSelectedWorkMode}
+                jobType={jobType}                 setJobType={setJobType}
+                countries={countriesList}
+                onReset={handleReset}
+                activeFilterCount={activeFilterCount}
+              />
+            </aside>
+
+            {/* 2. CENTER PANEL: Internship feed (Independent scroll) */}
+            <section className="flex-1 min-w-0 h-full overflow-y-auto scrollbar-thin p-4 bg-[#F8FAFC]">
+              
+              {/* Feed discovery header */}
+              {!loading && !error && (
+                <div className="bg-white rounded-2xl border border-[#E2E8F0] p-5 mb-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <h2 className="text-sm font-bold text-[#0F172A]">🔍 Internship Discovery Feed</h2>
+                      <p className="text-[11px] text-[#64748B] mt-0.5">
+                        Aggregated from <span className="font-semibold text-[#0F172A]">Remotive · Arbeitnow · JSearch · The Muse · Adzuna</span>
+                        {cacheStatus && <> · <span className="text-[#22C55E] font-semibold">{cacheStatus.jobCount} cached</span></>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {lastRefresh && (
+                        <span className="text-[10px] text-[#94A3B8] hidden sm:inline">
+                          Updated: {new Date(lastRefresh).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => fetchJobs(false)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] rounded-lg transition-colors"
+                      >
+                        Refresh
+                      </button>
+                      {activeFilterCount > 0 && (
+                        <button
+                          onClick={handleReset}
+                          className="px-3 py-1.5 text-[11px] font-bold text-[#EA580C] bg-[#FFF7ED] border border-[#FED7AA] rounded-lg transition-colors"
+                        >
+                          Clear ({activeFilterCount})
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Source badges */}
+                  <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-[#F1F5F9]">
+                    {[
+                      { name:'Remotive',    bg:'#FDF4FF', text:'#9333EA', border:'#E9D5FF' },
+                      { name:'Arbeitnow',   bg:'#F0FDF4', text:'#16A34A', border:'#BBF7D0' },
+                      { name:'The Muse',    bg:'#FFF1F2', text:'#E11D48', border:'#FECDD3' },
+                      { name:'Adzuna',      bg:'#FFF7ED', text:'#EA580C', border:'#FED7AA' },
+                      { name:'JSearch',     bg:'#ECFDF5', text:'#059669', border:'#A7F3D0' },
+                    ].map(s => (
+                      <button
+                        key={s.name}
+                        onClick={() => setSelectedSource(s.name === selectedSource ? '' : s.name)}
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border transition-all"
+                        style={{
+                          background: s.name === selectedSource ? s.text : s.bg,
+                          color: s.name === selectedSource ? 'white' : s.text,
+                          borderColor: s.border,
+                        }}
+                      >
+                        {s.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Sort controls and job count */}
+              {!loading && !error && filteredJobs.length > 0 && (
+                <SortBar count={filteredJobs.length} sort={sort} setSort={setSort} />
+              )}
+
+              {/* Skeletons loader */}
+              {loading && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
+                </div>
+              )}
+
+              {/* Errors container */}
+              {!loading && error && (
+                <div className="bg-white rounded-2xl border border-red-100 p-8 text-center shadow-sm">
+                  <h3 className="font-bold text-[#0F172A] mb-1 text-sm">Connection Error</h3>
+                  <p className="text-xs text-[#64748B] mb-4">{error}</p>
+                  <button onClick={fetchJobs} className="px-4 py-2 bg-[#2563EB] text-white text-xs font-semibold rounded-xl hover:bg-[#1D4ED8] transition-colors">
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {/* No results card */}
+              {!loading && !error && filteredJobs.length === 0 && (
+                <div className="bg-white rounded-2xl border border-[#E2E8F0] p-10 text-center shadow-sm">
+                  <h3 className="font-bold text-[#0F172A] mb-1 text-sm">No results found</h3>
+                  <p className="text-xs text-[#64748B] mb-4">Try adjusting your filters or search terms.</p>
+                  <button onClick={handleReset} className="px-4 py-2 border border-[#E2E8F0] text-[#2563EB] text-xs font-semibold rounded-xl hover:border-[#2563EB] transition-colors">
+                    Clear Filters
+                  </button>
+                </div>
+              )}
+
+              {/* Cards Grid */}
+              {!loading && !error && filteredJobs.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-6">
+                  {filteredJobs.map((job) => (
+                    <JobCard key={job.id} job={job} />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* 3. RIGHT SIDEBAR: Companies & Insights (Fixed width, independent scroll) */}
+            <aside className="w-[300px] shrink-0 border-l border-[#E2E8F0] bg-white overflow-y-auto scrollbar-thin p-4 hidden xl:block h-full space-y-5">
+              
+              {/* Popular Companies */}
+              <div className="border border-[#E2E8F0] rounded-xl p-4 shadow-sm bg-white">
+                <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-3">Popular Companies</h3>
+                <div className="divide-y divide-[#F1F5F9] -mx-1">
+                  {POPULAR_COMPANIES.map((c) => (
+                    <CompanyPill key={c.name} name={c.name} color={c.color} />
+                  ))}
+                </div>
+                <button
+                  onClick={() => setCurrentPage('companies')}
+                  className="mt-3.5 w-full text-left text-[11px] font-bold text-[#2563EB] hover:text-[#1D4ED8] transition-colors"
+                >
+                  View company prep guide →
+                </button>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="border border-[#E2E8F0] rounded-xl p-4 shadow-sm bg-white">
+                <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-2.5">Quick Stats</h3>
+                <div className="space-y-2 text-xs text-[#475569]">
+                  <div className="flex justify-between">
+                    <span>Active Internships:</span>
+                    <span className="font-bold text-[#2563EB]">{jobs.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>IT Opportunities:</span>
+                    <span className="font-bold text-[#22C55E]">{jobs.filter(j => !ECE_COMPANIES_SET.has(j.company)).length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>ECE Opportunities:</span>
+                    <span className="font-bold text-[#EA580C]">{jobs.filter(j => ECE_COMPANIES_SET.has(j.company)).length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Remote Openings:</span>
+                    <span className="font-bold text-[#7C3AED]">{jobs.filter(j => j.workMode === 'Remote' || j.isRemote).length}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Featured Companies Showcase */}
+              <div className="border border-[#E2E8F0] rounded-xl p-4 shadow-sm bg-white">
+                <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-3">Featured Companies</h3>
+                <div className="flex flex-col gap-2.5">
+                  {TOP_COMPANIES.map(c => (
+                    <div key={c.name} className="flex items-center gap-2.5 p-2 bg-[#FAFBFD] border border-[#E2E8F0] rounded-lg">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ background: c.color }}>
+                        {c.icon}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-[#0F172A] truncate">{c.name}</div>
+                        <div className="text-[10px] text-[#22C55E] font-semibold">{c.stipend}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Placement Tips */}
+              <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl p-4">
+                <p className="text-xs font-bold text-[#2563EB] mb-1">💡 Placement Tip</p>
+                <p className="text-xs text-[#1E40AF] leading-relaxed">
+                  Always optimize your resume using the X-Y-Z formula: "Accomplished [X] as measured by [Y], by doing [Z]" to pass ATS reviews.
+                </p>
+              </div>
+
+            </aside>
+          </div>
+
+          {/* MOBILE SLIDE-OUT DRAWERS */}
+          {/* 1. Left drawer: Filters */}
+          {mobileFilterOpen && (
+            <div className="fixed inset-0 z-50 flex lg:hidden">
+              <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm" onClick={() => setMobileFilterOpen(false)} />
+              <div className="relative flex flex-col w-full max-w-xs bg-white h-full shadow-xl overflow-y-auto p-5 animate-slide-in-left">
+                <div className="flex items-center justify-between mb-4 border-b border-[#F1F5F9] pb-3 shrink-0">
+                  <h3 className="font-bold text-sm text-[#0F172A]">Filter Openings</h3>
+                  <button onClick={() => setMobileFilterOpen(false)} className="p-1 text-xs font-bold text-[#64748B]">✕ Close</button>
+                </div>
+                <div className="flex-1">
+                  <SearchFilter
+                    searchTerm={searchTerm}           setSearchTerm={setSearchTerm}
+                    companySearch={companySearch}     setCompanySearch={setCompanySearch}
+                    skillsSearch={skillsSearch}       setSkillsSearch={setSkillsSearch}
+                    selectedSource={selectedSource}   setSelectedSource={setSelectedSource}
+                    selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry}
+                    selectedWorkMode={selectedWorkMode} setSelectedWorkMode={setSelectedWorkMode}
+                    jobType={jobType}                 setJobType={setJobType}
+                    countries={countriesList}
+                    onReset={handleReset}
+                    activeFilterCount={activeFilterCount}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 2. Right drawer: Companies */}
+          {mobileCompanyOpen && (
+            <div className="fixed inset-0 z-50 flex justify-end lg:hidden">
+              <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm" onClick={() => setMobileCompanyOpen(false)} />
+              <div className="relative flex flex-col w-full max-w-xs bg-white h-full shadow-xl overflow-y-auto p-5 animate-slide-in-right">
+                <div className="flex items-center justify-between mb-4 border-b border-[#F1F5F9] pb-3 shrink-0">
+                  <h3 className="font-bold text-sm text-[#0F172A]">Companies & Insights</h3>
+                  <button onClick={() => setMobileCompanyOpen(false)} className="p-1 text-xs font-bold text-[#64748B]">✕ Close</button>
+                </div>
+                <div className="space-y-5 flex-1">
+                  {/* Popular Companies */}
+                  <div className="border border-[#E2E8F0] rounded-xl p-4 shadow-sm bg-white">
+                    <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-3">Popular Companies</h3>
+                    <div className="divide-y divide-[#F1F5F9] -mx-1">
+                      {POPULAR_COMPANIES.map((c) => (
+                        <CompanyPill key={c.name} name={c.name} color={c.color} onClick={() => setMobileCompanyOpen(false)} />
+                      ))}
+                    </div>
+                  </div>
+                  {/* Quick Stats */}
+                  <div className="border border-[#E2E8F0] rounded-xl p-4 shadow-sm bg-white">
+                    <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-2.5">Quick Stats</h3>
+                    <div className="space-y-2 text-xs text-[#475569]">
+                      <div className="flex justify-between">
+                        <span>Active Jobs:</span>
+                        <span className="font-bold text-[#2563EB]">{jobs.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Remote Roles:</span>
+                        <span className="font-bold text-[#7C3AED]">{jobs.filter(j => j.workMode === 'Remote' || j.isRemote).length}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Placement Tip */}
+                  <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl p-4">
+                    <p className="text-xs font-bold text-[#2563EB] mb-1">💡 Placement Tip</p>
+                    <p className="text-xs text-[#1E40AF] leading-relaxed">
+                      Optimize resume sections for ATS systems using standard terminology and active verbs.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
       )}
 
     </div>

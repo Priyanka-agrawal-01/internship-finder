@@ -4,14 +4,22 @@ const crypto   = require('crypto');
 
 // ─── Preference sub-schema ────────────────────────────────────────────────────
 const PreferencesSchema = new mongoose.Schema({
-  // Broad category toggles
   itCompanies:       { type: Boolean, default: true  },
   eceCompanies:      { type: Boolean, default: false },
-  // Role keyword filters (empty = match all)
+  remoteInternships: { type: Boolean, default: false },
+  productCompanies:  { type: Boolean, default: false },
+  startups:          { type: Boolean, default: false },
+  aiMlRoles:         { type: Boolean, default: false },
+  frontendRoles:     { type: Boolean, default: false },
+  backendRoles:      { type: Boolean, default: false },
+  vlsiRoles:         { type: Boolean, default: false },
+  embeddedRoles:     { type: Boolean, default: false },
+  frequency:         { type: String, enum: ['instant', '6hours', 'daily'], default: '6hours' },
+  locations:         { type: [String], default: [] },
+  
+  // Keep legacy options for safety
   roles:             { type: [String], default: []   },
-  // Specific company names (empty = match all)
   companies:         { type: [String], default: []   },
-  // Only internships? (false = include all active openings)
   internshipsOnly:   { type: Boolean, default: true  },
 }, { _id: false });
 
