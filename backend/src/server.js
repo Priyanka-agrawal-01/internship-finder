@@ -21,24 +21,15 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, cb) => {
-    const isLocal = !origin || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:');
-    const isCloudProvider = origin && (
-      origin.endsWith('.onrender.com') ||
-      origin.includes('vercel.app') ||
-      origin.includes('netlify.app') ||
-      origin.includes('github.io')
-    );
-
     if (
-      isLocal ||
-      isCloudProvider ||
+      !origin ||
       allowedOrigins.includes(origin) ||
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('http://127.0.0.1:') ||
       process.env.NODE_ENV !== 'production'
     ) {
       return cb(null, true);
     }
-
-    console.warn(`[CORS] Blocked origin: ${origin}`);
     cb(new Error('Blocked by CORS policy'));
   },
   credentials: true,
