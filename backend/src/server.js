@@ -19,7 +19,7 @@ if (process.env.NODE_ENV === 'production' || process.env.TRUST_PROXY === 'true')
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 // FRONTEND_URL may hold several origins separated by commas, e.g.
-//   FRONTEND_URL=https://internpulse.vercel.app,https://www.internpulse.dev
+//   FRONTEND_URL=https://your-app.vercel.app,https://www.your-domain.com
 const normalizeOrigin = o => o.trim().replace(/\/+$/, '');
 const allowedOrigins = new Set([
   ...(process.env.FRONTEND_URL || 'http://localhost:5173').split(',').map(normalizeOrigin).filter(Boolean),

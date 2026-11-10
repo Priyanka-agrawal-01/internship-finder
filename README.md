@@ -137,3 +137,4 @@ Frontend: set `VITE_API_URL` to the deployed backend URL (see [`frontend/.env.ex
 ### Frontend on Vercel
 1. **Add New → Project**, import the repo, **Root Directory** `frontend` (Vite is auto-detected; output `dist`).
 2. Set `VITE_API_URL=<your Render URL>` and deploy.
+3. [`frontend/vercel.json`](frontend/vercel.json) sets the security headers (Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy). Its `connect-src` must list the origin of `VITE_API_URL`, and its `script-src` the hash of each inline `<script>` in `index.html`. `npm run build` runs [`scripts/check-csp.js`](frontend/scripts/check-csp.js) first and fails with the value to add when either is missing.
