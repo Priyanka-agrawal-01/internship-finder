@@ -232,14 +232,14 @@ function buildPage(title, message, success) {
   <title>${escapeHtml(title)} — InternPulse</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',Arial,sans-serif;background:#F8FAFC;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
-    .card{background:#fff;border:1px solid #E2E8F0;border-radius:16px;max-width:440px;width:100%;padding:40px 32px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.06)}
+    body{font-family:'IBM Plex Sans','Segoe UI',Arial,sans-serif;background:#F7F9F8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+    .card{background:#fff;border:1px solid #D5E1DF;border-radius:16px;max-width:440px;width:100%;padding:40px 32px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.06)}
     .icon{font-size:48px;margin-bottom:16px}
-    h1{font-size:22px;font-weight:800;color:#0F172A;margin-bottom:12px}
-    p{color:#64748B;font-size:15px;line-height:1.6;margin-bottom:24px}
-    a.btn{display:inline-block;background:#2563EB;color:#fff;text-decoration:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700}
-    .brand{margin-top:24px;font-size:13px;color:#94A3B8}
-    .brand strong{color:#2563EB}
+    h1{font-size:22px;font-weight:800;color:#06525C;margin-bottom:12px}
+    p{color:#2F737D;font-size:15px;line-height:1.6;margin-bottom:24px}
+    a.btn{display:inline-block;background:#06525C;color:#fff;text-decoration:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700}
+    .brand{margin-top:24px;font-size:13px;color:#5E8D93}
+    .brand strong{color:#06525C}
   </style>
 </head>
 <body>

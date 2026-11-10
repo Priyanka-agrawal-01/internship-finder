@@ -12,6 +12,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#f7f9f8">
+<!-- the API the visit counter (/track.js) reports to; Vite fills it from VITE_API_URL -->
+<meta name="api-url" content="%VITE_API_URL%">
 <!-- <link rel="canonical" href="https://[the client's domain]/"> : add once the production domain is known -->
 <meta name="site-kind" content="software">
 <meta name="page-type" content="software">
@@ -546,5 +548,6 @@
 <script type="module" src="/assets/motion/motion.js"></script>
 <script type="module" src="/assets/layout/layout.js"></script>
 <script type="module" src="/assets/diagrams/mount.js"></script>
+<script src="/track.js" defer></script>
 </body>
 </html>

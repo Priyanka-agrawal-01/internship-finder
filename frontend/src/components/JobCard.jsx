@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useSaved, jobData } from '../saved/savedContext';
+import { BookmarkButton, AppliedButton } from './SaveButtons';
 
 /* ─── Source badge colours ──────────────────────────────────────────────────── */
 const SOURCE_STYLES = {
@@ -61,7 +63,10 @@ function CompanyLogo({ company = '', logoUrl, size = 44 }) {
 
 /* ─── Main JobCard ───────────────────────────────────────────────────────────── */
 export default function JobCard({ job }) {
+  const saved = useSaved();
   if (!job) return null;
+  const bookmarked = saved.isBookmarked('job', job.id);
+  const applied    = saved.isApplied('job', job.id);
 
   const src   = SOURCE_STYLES[job.source] ?? SOURCE_STYLES['InternPulse'];
   const wm    = WORK_MODE_STYLES[job.workMode] ?? WORK_MODE_STYLES['On-site'];
@@ -89,6 +94,7 @@ export default function JobCard({ job }) {
             )}
           </div>
         </div>
+        <BookmarkButton on={bookmarked} onClick={() => saved.toggleBookmark('job', job.id, jobData(job))} />
       </div>
 
       {/* ── Meta row: location, work mode, stipend ─────────── */}
@@ -168,13 +174,16 @@ export default function JobCard({ job }) {
         )}
       </div>
 
-      {/* ── Apply button ────────────────────────────────────── */}
-      <a href={job.url || '#'} target="_blank" rel="noopener noreferrer"
-        className={`mt-3 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 ${
-          job.url ? 'bg-[#06525C] hover:bg-[#043F47]' : 'bg-[#5E8D93] cursor-not-allowed'
-        }`}>
-        {job.url ? 'Apply Now →' : 'Link Unavailable'}
-      </a>
+      {/* ── Apply button + applied toggle ───────────────────── */}
+      <div className="mt-3 flex gap-2">
+        <a href={job.url || '#'} target="_blank" rel="noopener noreferrer"
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 ${
+            job.url ? 'bg-[#06525C] hover:bg-[#043F47]' : 'bg-[#5E8D93] cursor-not-allowed'
+          }`}>
+          {job.url ? 'Apply Now →' : 'Link Unavailable'}
+        </a>
+        <AppliedButton on={applied} onClick={() => saved.toggleApplied('job', job.id, jobData(job))} />
+      </div>
     </div>
   );
 }

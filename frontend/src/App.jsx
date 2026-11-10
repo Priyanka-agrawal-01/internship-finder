@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import axios from 'axios';
 import Navbar        from './components/Navbar';
 import SearchFilter  from './components/SearchFilter';
@@ -8,14 +8,13 @@ import ResourcesPage  from './pages/ResourcesPage';
 import BlogPage       from './pages/BlogPage';
 import AboutPage      from './pages/AboutPage';
 import AlertsPage     from './pages/AlertsPage';
+import MyJobsPage     from './pages/MyJobsPage';
+import { BACKEND_URL } from './lib/api';
+import { useAuth } from './auth/authContext';
 
-const getBackendUrl = () => {
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    return 'http://localhost:5000';
-  }
-  return import.meta.env.VITE_API_URL || 'http://localhost:5000';
-};
-const BACKEND_URL = getBackendUrl();
+// only the site admin opens it, so it loads on its own instead of in every visitor's bundle
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+
 
 /* ─── Popular companies list (right sidebar) ──────── */
 const POPULAR_COMPANIES = [
@@ -131,9 +130,34 @@ function SortBar({ count, sort, setSort, internshipsOnly }) {
   );
 }
 
+/* ─── Admin: only for the admin account (the API checks this too) ─── */
+function AdminGate({ onNavigate }) {
+  const { status, user, openAuth } = useAuth();
+  if (status === 'loading') return <div className="max-w-7xl mx-auto px-6 py-16 text-sm text-[#2F737D]">Checking your sign-in…</div>;
+  if (user?.role === 'admin') {
+    return (
+      <Suspense fallback={<div className="max-w-7xl mx-auto px-6 py-16 text-sm text-[#2F737D]">Loading the admin panel…</div>}>
+        <AdminPage onNavigate={onNavigate} />
+      </Suspense>
+    );
+  }
+  return (
+    <div className="max-w-md mx-auto px-6 py-20 text-center">
+      <h1 className="text-2xl font-bold text-[#06525C]">Admin</h1>
+      <p className="text-sm text-[#2F737D] mt-2">
+        {status === 'signedIn' ? 'This page is only for the site admin.' : 'Sign in with the admin account to open this page.'}
+      </p>
+      <div className="flex justify-center gap-2 mt-5">
+        {status !== 'signedIn' && <button onClick={() => openAuth('signin')} className="px-4 py-2 rounded-xl bg-[#06525C] text-white text-sm font-semibold">Sign in</button>}
+        <button onClick={() => onNavigate('jobs')} className="px-4 py-2 rounded-xl border border-[#C3D4D2] text-[#06525C] text-sm font-semibold">Go to the job feed</button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── App ─────────────────────────────────────────── */
 /* ─── Routing ─────────────────────────────────────── */
-const PAGES = ['jobs', 'companies', 'resources', 'blog', 'about', 'alerts'];
+const PAGES = ['jobs', 'companies', 'resources', 'blog', 'about', 'alerts', 'myjobs', 'admin'];
 const pageFromHash = () => {
   const h = (typeof window !== 'undefined' ? window.location.hash : '').replace('#', '');
   return PAGES.includes(h) ? h : 'jobs';
@@ -332,6 +356,8 @@ export default function App() {
       {currentPage === 'blog'      && <BlogPage />}
       {currentPage === 'about'     && <AboutPage />}
       {currentPage === 'alerts'    && <AlertsPage />}
+      {currentPage === 'myjobs'    && <MyJobsPage onNavigate={navigate} />}
+      {currentPage === 'admin'     && <AdminGate onNavigate={navigate} />}
 
       {/* ── JOBS INTERACTIVE 3-COLUMN DASHBOARD ────────────────── */}
       {currentPage === 'jobs' && (

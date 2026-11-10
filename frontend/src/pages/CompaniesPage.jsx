@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { IT_COMPANIES, ECE_COMPANIES } from '../data/companiesData';
 import { getCompanyPrep } from '../data/prepData';
+import { useSaved, companyData } from '../saved/savedContext';
 
 // ─── Colour helpers ───────────────────────────────────────────────────────────
 function stipendColor(min) {
@@ -592,44 +593,25 @@ export default function CompaniesPage() {
   const [filter,     setFilter]     = useState('All');
   const [modal,      setModal]      = useState(null);
 
-  // Bookmarks & Checklist States (persistent via localStorage)
-  const [bookmarked, setBookmarked] = useState(() => {
-    try {
-      const saved = localStorage.getItem('ip_bookmarked_companies');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [applied, setApplied] = useState(() => {
-    try {
-      const saved = localStorage.getItem('ip_applied_companies');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Interested (bookmarked) and Applied: kept in this browser, or in the account once signed in
+  const saved = useSaved();
+  const bookmarked = useMemo(() => saved.items.filter(i => i.kind === 'company' && i.bookmarked).map(i => i.itemId), [saved.items]);
+  const applied    = useMemo(() => saved.items.filter(i => i.kind === 'company' && i.applied).map(i => i.itemId), [saved.items]);
 
   // Pipeline Filter toggles
   const [pipelineFilter, setPipelineFilter] = useState('all'); // 'all' | 'interested' | 'applied'
 
+  const dataFor = id => {
+    const c = IT_COMPANIES.find(x => x.id === id) || ECE_COMPANIES.find(x => x.id === id);
+    return c ? companyData(c, IT_COMPANIES.includes(c) ? 'it' : 'ece') : undefined;
+  };
   const toggleBookmark = (id, e) => {
     if (e) e.stopPropagation();
-    const updated = bookmarked.includes(id)
-      ? bookmarked.filter(x => x !== id)
-      : [...bookmarked, id];
-    setBookmarked(updated);
-    localStorage.setItem('ip_bookmarked_companies', JSON.stringify(updated));
+    saved.toggleBookmark('company', id, dataFor(id));
   };
-
   const toggleApplied = (id, e) => {
     if (e) e.stopPropagation();
-    const updated = applied.includes(id)
-      ? applied.filter(x => x !== id)
-      : [...applied, id];
-    setApplied(updated);
-    localStorage.setItem('ip_applied_companies', JSON.stringify(updated));
+    saved.toggleApplied('company', id, dataFor(id));
   };
 
   const baseList = tab === 'it' ? IT_COMPANIES : ECE_COMPANIES;

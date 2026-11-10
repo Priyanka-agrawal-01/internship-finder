@@ -7,9 +7,26 @@ const { getCacheStatus }           = require('./services/jobService');
 
 const jobRoutes       = require('./routes/jobRoutes');
 const subscribeRoutes = require('./routes/subscribeRoutes');
+const authRoutes      = require('./routes/authRoutes');
+const meRoutes        = require('./routes/meRoutes');
+const adminRoutes     = require('./routes/adminRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const { isGoogleConfigured } = require('./services/googleAuth');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
+
+// Don't advertise the framework, and give every response (JSON and the unsubscribe
+// pages alike) basic browser protections
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options':        'DENY',
+    'Referrer-Policy':        'no-referrer',
+  });
+  next();
+});
 
 // Behind Render/Heroku-style proxies, trust the first hop so req.ip is the
 // real client IP (needed for per-IP rate limiting).
@@ -43,6 +60,8 @@ app.use(cors({
   },
 }));
 
+// a guest's saved items arrive in one upload when they sign in, so that route takes more
+app.use('/api/me/saved/import', express.json({ limit: '600kb' }));
 app.use(express.json({ limit: '20kb' }));
 app.use(express.urlencoded({ extended: false, limit: '20kb' }));
 
@@ -73,6 +92,10 @@ app.get('/', (req, res) => {
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/jobs',      jobRoutes);
 app.use('/api/subscribe', subscribeRoutes);
+app.use('/api/auth',      authRoutes);
+app.use('/api/me',        meRoutes);
+app.use('/api/admin',     adminRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // ── Global error handler ─────────────────────────────────────────────────────
 app.use((err, req, res, _next) => {
@@ -110,6 +133,7 @@ async function boot() {
     console.log(`  💼 Jobs               →  http://localhost:${PORT}/api/jobs`);
     console.log(`  📊 Cache status       →  http://localhost:${PORT}/api/jobs/status`);
     console.log(`  🔔 Subscribe          →  http://localhost:${PORT}/api/subscribe`);
+    console.log(`  👤 Accounts           →  http://localhost:${PORT}/api/auth (Google sign-in ${isGoogleConfigured() ? 'on' : 'off: set GOOGLE_CLIENT_ID'})`);
     console.log(`${sep}`);
     console.log(`  ✅ Remotive      (free, no key needed)`);
     console.log(`  ✅ Arbeitnow     (free, no key needed)`);
