@@ -8,6 +8,7 @@ process.env.SMTP_PASS = 'test';
 delete process.env.ADZUNA_APP_ID;
 delete process.env.ADZUNA_APP_KEY;
 delete process.env.RAPIDAPI_KEY;
+delete process.env.JOOBLE_API_KEY;
 
 const test   = require('node:test');
 const assert = require('node:assert/strict');

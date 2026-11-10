@@ -30,7 +30,8 @@ project_1/
 │   │   │   ├── adminRoutes.js    # /api/admin (admin account only)
 │   │   │   └── analyticsRoutes.js# /api/analytics/visit
 │   │   ├── services/
-│   │   │   ├── jobService.js     # Fetches, normalises, caches jobs from 5 APIs
+│   │   │   ├── jobService.js     # Builds the feed: every source on its own schedule, India first
+│   │   │   ├── jobs/             # Company careers boards, Himalayas, Jobicy, Jooble, shared helpers
 │   │   │   ├── jobMatcher.js     # Matches jobs to alert preferences (pure functions)
 │   │   │   ├── alertService.js   # Hourly cron that emails new matching jobs
 │   │   │   └── emailService.js   # Welcome / alert / unsubscribe email templates
@@ -99,7 +100,10 @@ All backend variables are documented in [`backend/.env.example`](backend/.env.ex
 | `BACKEND_URL` | Public URL of the API, used for unsubscribe links in emails. Falls back to Render's `RENDER_EXTERNAL_URL`. |
 | `MONGODB_URI` | Enables persistent subscribers and job alerts. |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` / `EMAIL_FROM` | Real email delivery. Or use `EMAIL_SERVICE` / `EMAIL_USER` / `EMAIL_PASS` for Gmail (needs a 16-character App Password). |
-| `ADZUNA_APP_ID` / `ADZUNA_APP_KEY`, `RAPIDAPI_KEY` | Optional keyed job sources (Adzuna, JSearch). |
+| `RAPIDAPI_KEY` | JSearch (Google Jobs) in India. Free plan: 200 requests a month; the feed uses about 4 a day. |
+| `JSEARCH_REFRESH_HOURS` | How often JSearch is searched, default `24`. Lower it only on a paid plan. |
+| `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | Adzuna India (keys from developer.adzuna.com). |
+| `JOOBLE_API_KEY` | Jooble, a search over many Indian job sites (free key from jooble.org/api/about). |
 | `ADMIN_TOKEN` | Enables admin endpoints; send it as the `x-admin-token` header. Unset = endpoints disabled. |
 | `ALERT_CRON` | Alert schedule, default hourly (`0 * * * *`). Servers sharing one database (say, your laptop and Render) take turns: only one sends each hour's alerts. |
 | `GOOGLE_CLIENT_ID` | Turns on *Continue with Google* (see [Accounts](#accounts-and-my-jobs)). Set it on the backend only; the frontend reads it from `/api/auth/config`. |
@@ -115,8 +119,22 @@ Frontend: set `VITE_API_URL` to the deployed backend URL (see [`frontend/.env.ex
 ## 🌐 How It Works
 
 ### Job fetching & caching
-- `jobService.js` queries **Remotive, Arbeitnow, The Muse** (free) and **Adzuna, JSearch** (keyed) in parallel. A failing source is logged with its reason and simply contributes no jobs.
-- Results are normalised to one shape (`id`, `title`, `company`, `location`, `country`, `workMode`, `tags`, `stipend`, `isInternship`, `isNew`, `postedAt`, …), filtered to the last 60 days, and de-duplicated by URL and title+company.
+- The feed is built for India. Each source runs on its own schedule:
+
+  | Source | Key | Every | What it adds |
+  |---|---|---|---|
+  | Company careers pages | none | 3 h | Openings in India from 44 companies' own job boards (Greenhouse, Lever, Ashby, SmartRecruiters), such as Swiggy, Paytm, Razorpay, Meesho, Groww, Bosch, Stripe and Databricks. The list is `backend/src/data/companyBoards.js`; add a company with one line. |
+  | JSearch | `RAPIDAPI_KEY` | 24 h | Google Jobs searches in India |
+  | Adzuna | `ADZUNA_APP_ID` + `ADZUNA_APP_KEY` | 6 h | Adzuna India |
+  | Jooble | `JOOBLE_API_KEY` | 6 h | Indian job sites |
+  | Himalayas | none | 3 h | Remote roles open to people in India |
+  | Jobicy | none | 6 h | Remote roles in Asia-Pacific |
+  | Remotive | none | 30 min | Remote internships worldwide |
+  | Arbeitnow | none | 30 min | Internships in Europe (one page) |
+
+- A source that fails keeps showing its last good listings, and the admin panel's *Feed and alerts* tab says why it failed (a refused key, a used-up quota, a changed API). The keyed sources' results, and their failed attempts, are saved in MongoDB, so a restart or a second server on the same database doesn't spend their quota again. Changing a key makes that source fetch at once.
+- The job feed opens filtered to India (clear the filter to see everything), and the API lists Indian jobs first.
+- Results are normalised to one shape (`id`, `title`, `company`, `location`, `country`, `workMode`, `tags`, `stipend`, `isInternship`, `isNew`, `postedAt`, …), filtered to the last 60 days (except company careers listings, which are open roles however old), and de-duplicated by URL and title+company.
 - The merged list is cached in memory for **30 minutes**. Concurrent requests share a single upstream fetch, and a stale cache is served instantly while it refreshes in the background.
 - Only real API data is shown — nothing is hardcoded into the feed. `isInternship` is detected from keywords (intern, co-op, trainee, graduate program…), and the UI reports internships and total openings separately.
 

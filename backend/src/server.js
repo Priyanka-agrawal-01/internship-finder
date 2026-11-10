@@ -67,11 +67,11 @@ app.use(express.urlencoded({ extended: false, limit: '20kb' }));
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
-  const counts = getCacheStatus().sourceCounts;
-  const sourceState = (name, keyed) => {
-    if (keyed === false) return 'not configured';
-    if (!counts) return 'not fetched yet';
-    return counts[name] > 0 ? `active (${counts[name]} jobs)` : 'returned 0 jobs on last fetch';
+  const status = getCacheStatus();
+  const describe = s => {
+    if (!s.configured) return 'not configured (no key)';
+    if (s.error) return `failing (${s.error})${s.count ? `, showing ${s.count} jobs from the last good fetch` : ''}`;
+    return s.count > 0 ? `active (${s.count} jobs)` : 'returned 0 jobs on last fetch';
   };
   res.json({
     name:      'InternPulse API v2',
@@ -79,13 +79,8 @@ app.get('/', (req, res) => {
     uptime:    `${Math.round(process.uptime())}s`,
     timestamp: new Date().toISOString(),
     database:  isDBConnected() ? 'connected' : 'not connected (set MONGODB_URI)',
-    sources: {
-      remotive:  sourceState('remotive'),
-      arbeitnow: sourceState('arbeitnow'),
-      themuse:   sourceState('muse'),
-      adzuna:    sourceState('adzuna',  !!(process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY)),
-      jsearch:   sourceState('jsearch', !!process.env.RAPIDAPI_KEY),
-    },
+    jobs:      { total: status.jobCount, inIndia: status.indiaCount, internships: status.internshipCount },
+    sources:   status.sources ? Object.fromEntries(status.sources.map(s => [s.key, describe(s)])) : 'not fetched yet',
   });
 });
 
@@ -135,11 +130,11 @@ async function boot() {
     console.log(`  🔔 Subscribe          →  http://localhost:${PORT}/api/subscribe`);
     console.log(`  👤 Accounts           →  http://localhost:${PORT}/api/auth (Google sign-in ${isGoogleConfigured() ? 'on' : 'off: set GOOGLE_CLIENT_ID'})`);
     console.log(`${sep}`);
-    console.log(`  ✅ Remotive      (free, no key needed)`);
-    console.log(`  ✅ Arbeitnow     (free, no key needed)`);
-    console.log(`  ✅ The Muse      (free, no key needed)`);
-    console.log(`  ${process.env.ADZUNA_APP_ID ? '✅' : '⚪'} Adzuna        ${process.env.ADZUNA_APP_ID ? '(keyed – active)' : '(add ADZUNA_APP_ID + ADZUNA_APP_KEY)'}`);
-    console.log(`  ${process.env.RAPIDAPI_KEY  ? '✅' : '⚪'} JSearch       ${process.env.RAPIDAPI_KEY  ? '(keyed – active)' : '(add RAPIDAPI_KEY)'}`);
+    console.log(`  ✅ Company careers (44 companies' job boards, India only, no key)`);
+    console.log(`  ✅ Himalayas · Jobicy · Remotive · Arbeitnow (free, no key)`);
+    console.log(`  ${process.env.RAPIDAPI_KEY  ? '✅' : '⚪'} JSearch      ${process.env.RAPIDAPI_KEY  ? `(India, every ${Number(process.env.JSEARCH_REFRESH_HOURS) || 24} h to fit the free quota)` : '(add RAPIDAPI_KEY)'}`);
+    console.log(`  ${process.env.ADZUNA_APP_ID ? '✅' : '⚪'} Adzuna       ${process.env.ADZUNA_APP_ID ? '(India, every 6 h)' : '(add ADZUNA_APP_ID + ADZUNA_APP_KEY)'}`);
+    console.log(`  ${process.env.JOOBLE_API_KEY ? '✅' : '⚪'} Jooble       ${process.env.JOOBLE_API_KEY ? '(India, every 6 h)' : '(add JOOBLE_API_KEY, free at jooble.org/api/about)'}`);
     console.log(`${sep}`);
     console.log(`  🔄 Job cache auto-refreshes every 30 minutes`);
     console.log(`  🔔 Alert cron: "${alertCron}" (each subscriber's frequency is respected)`);

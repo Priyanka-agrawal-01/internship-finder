@@ -6,8 +6,8 @@ const { requireAdmin, asyncHandler } = require('../middleware/security');
 
 /**
  * GET /api/jobs
- * Returns live listings aggregated from Remotive, Arbeitnow, Adzuna, JSearch
- * and The Muse. Every job comes from a real API source.
+ * Returns live listings from companies' careers pages and job boards (see
+ * services/jobService.js), Indian jobs first. Every job comes from a real API source.
  */
 router.get('/', asyncHandler(async (req, res) => {
   try {
