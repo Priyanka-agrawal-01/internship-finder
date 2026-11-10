@@ -75,3 +75,18 @@ test('IT / ECE filters', () => {
   assert.equal(jobMatchesPreferences(it,  { itCompanies: true }), true);
   assert.equal(jobMatchesPreferences(ece, { itCompanies: true, eceCompanies: true }), true);
 });
+
+test('internship detection uses whole words', () => {
+  const { checkIsInternship } = require('../src/services/jobService');
+  // false positives seen in the live feed
+  assert.equal(checkIsInternship('Account Executive - Munich', ['International RSS']), false);
+  assert.equal(checkIsInternship('Internal Control Manager', ['Central']), false);
+  assert.equal(checkIsInternship('Lead Frontend Architekt', ['Internet and software']), false);
+  // real internships, in several languages
+  assert.equal(checkIsInternship('AI Builder Intern (m/f/d)'), true);
+  assert.equal(checkIsInternship('People Operations & Payroll (Working Student)'), true);
+  assert.equal(checkIsInternship('Werkstudent:in Marketing & Growth'), true);
+  assert.equal(checkIsInternship('Stage - Videograaf (feb 2027)'), true);
+  assert.equal(checkIsInternship('Software Engineering Internship, Summer 2027'), true);
+  assert.equal(checkIsInternship('Data Analyst', [], 'INTERN'), true);
+});

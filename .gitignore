@@ -25,3 +25,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# design-skill check output (headless Chrome profiles, screenshots)
+frontend/.taste-skill/
+frontend/shots/

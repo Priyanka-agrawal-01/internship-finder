@@ -5,14 +5,14 @@ import { getCompanyPrep } from '../data/prepData';
 // ─── Colour helpers ───────────────────────────────────────────────────────────
 function stipendColor(min) {
   if (min >= 120000) return { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' };
-  if (min >= 80000)  return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' };
+  if (min >= 80000)  return { bg: '#E6F0EF', text: '#043F47', border: '#B5D2D0' };
   if (min >= 50000)  return { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' };
-  return               { bg: '#F8FAFC',  text: '#64748B', border: '#E2E8F0' };
+  return               { bg: '#F7F9F8',  text: '#2F737D', border: '#D5E1DF' };
 }
 
 // ─── Shared icons ─────────────────────────────────────────────────────────────
 const SearchIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E8D93" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
   </svg>
 );
@@ -23,12 +23,12 @@ const ExternalIcon = () => (
   </svg>
 );
 const MapPin = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5E8D93" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
   </svg>
 );
 const CloseIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5" strokeLinecap="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2F737D" strokeWidth="2.5" strokeLinecap="round">
     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
   </svg>
 );
@@ -73,10 +73,10 @@ function StatsBar({ companies, tab }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       {stats.map((s) => (
-        <div key={s.label} className="bg-white border border-[#E2E8F0] rounded-xl p-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        <div key={s.label} className="bg-white border border-[#D5E1DF] rounded-xl p-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <div className="text-2xl mb-1">{s.icon}</div>
-          <div className="text-xl font-bold text-[#0F172A]">{s.value}</div>
-          <div className="text-xs text-[#64748B] mt-0.5">{s.label}</div>
+          <div className="text-xl font-bold text-[#06525C]">{s.value}</div>
+          <div className="text-xs text-[#2F737D] mt-0.5">{s.label}</div>
         </div>
       ))}
     </div>
@@ -93,7 +93,7 @@ function FeaturedCarousel({ companies, onSelect }) {
   ));
   return (
     <div className="mb-7">
-      <p className="text-xs font-bold uppercase tracking-widest text-[#94A3B8] mb-3">Featured Companies</p>
+      <p className="text-xs font-bold uppercase tracking-widest text-[#5E8D93] mb-3">Featured Companies</p>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
         {featured.map((c) => {
           const sc = stipendColor(c.stipendMin);
@@ -101,11 +101,11 @@ function FeaturedCarousel({ companies, onSelect }) {
             <button
               key={c.id}
               onClick={() => onSelect(c)}
-              className="shrink-0 flex flex-col items-center gap-2 bg-white border border-[#E2E8F0] rounded-xl px-4 py-3 hover:border-[#2563EB] hover:shadow-hover transition-all"
+              className="shrink-0 flex flex-col items-center gap-2 bg-white border border-[#D5E1DF] rounded-xl px-4 py-3 hover:border-[#06525C] hover:shadow-hover transition-all"
               style={{ minWidth: 110 }}
             >
               <CompanyLogo name={c.name} color={c.color} size={40} />
-              <span className="text-xs font-semibold text-[#0F172A] text-center leading-tight">{c.name}</span>
+              <span className="text-xs font-semibold text-[#06525C] text-center leading-tight">{c.name}</span>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border" style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}>
                 {c.stipend}
               </span>
@@ -122,7 +122,7 @@ function CompanyCard({ company, onSelect, isBookmarked, isApplied, onToggleBookm
   const sc = stipendColor(company.stipendMin);
   return (
     <div
-      className="job-card bg-white border border-[#E2E8F0] rounded-xl p-5 flex flex-col cursor-pointer relative group"
+      className="job-card bg-white border border-[#D5E1DF] rounded-xl p-5 flex flex-col cursor-pointer relative group"
       style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
       onClick={() => onSelect(company)}
     >
@@ -160,14 +160,14 @@ function CompanyCard({ company, onSelect, isBookmarked, isApplied, onToggleBookm
       <div className="flex items-start gap-3 mb-3 pr-16">
         <CompanyLogo name={company.name} color={company.color} size={44} />
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-bold text-[#0F172A] leading-tight flex items-center gap-1.5">
+          <h3 className="text-sm font-bold text-[#06525C] leading-tight flex items-center gap-1.5">
             {company.name}
             {isApplied && (
               <span className="inline-flex items-center text-[9px] font-extrabold px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded">APPLIED</span>
             )}
           </h3>
           {company.domain && (
-            <p className="text-[11px] text-[#94A3B8] mt-0.5 leading-snug">{company.domain}</p>
+            <p className="text-[11px] text-[#5E8D93] mt-0.5 leading-snug">{company.domain}</p>
           )}
         </div>
       </div>
@@ -183,7 +183,7 @@ function CompanyCard({ company, onSelect, isBookmarked, isApplied, onToggleBookm
       </div>
 
       {/* Description */}
-      <p className="text-xs text-[#64748B] leading-relaxed line-clamp-2 mb-3 flex-1">
+      <p className="text-xs text-[#2F737D] leading-relaxed line-clamp-2 mb-3 flex-1">
         {company.description}
       </p>
 
@@ -192,7 +192,7 @@ function CompanyCard({ company, onSelect, isBookmarked, isApplied, onToggleBookm
         <div className="flex items-center gap-1 flex-wrap mb-3">
           <MapPin />
           {company.location.map(l => (
-            <span key={l} className="text-[11px] text-[#64748B] bg-[#F8FAFC] border border-[#E2E8F0] px-2 py-0.5 rounded-md">{l}</span>
+            <span key={l} className="text-[11px] text-[#2F737D] bg-[#F7F9F8] border border-[#D5E1DF] px-2 py-0.5 rounded-md">{l}</span>
           ))}
         </div>
       )}
@@ -200,7 +200,7 @@ function CompanyCard({ company, onSelect, isBookmarked, isApplied, onToggleBookm
       {/* Category tags */}
       <div className="flex flex-wrap gap-1 mb-4">
         {company.category?.map(cat => (
-          <span key={cat} className="text-[10px] font-semibold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] px-2 py-0.5 rounded-full">
+          <span key={cat} className="text-[10px] font-semibold text-[#06525C] bg-[#E6F0EF] border border-[#B5D2D0] px-2 py-0.5 rounded-full">
             {cat}
           </span>
         ))}
@@ -212,7 +212,7 @@ function CompanyCard({ company, onSelect, isBookmarked, isApplied, onToggleBookm
         target="_blank"
         rel="noopener noreferrer"
         onClick={e => e.stopPropagation()}
-        className="flex items-center justify-center gap-1.5 w-full py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold rounded-xl transition-colors"
+        className="flex items-center justify-center gap-1.5 w-full py-2 bg-[#06525C] hover:bg-[#043F47] text-white text-xs font-semibold rounded-xl transition-colors"
       >
         Visit Careers Page <ExternalIcon />
       </a>
@@ -231,19 +231,19 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-[#06525C]/40 backdrop-blur-sm" />
       <div
         className="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in"
         style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-[#E2E8F0]">
+        <div className="flex items-start justify-between p-6 border-b border-[#D5E1DF]">
           <div className="flex items-center gap-4">
             <CompanyLogo name={company.name} color={company.color} size={52} />
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-lg font-bold text-[#0F172A]">{company.name}</h2>
+                <h2 className="text-lg font-bold text-[#06525C]">{company.name}</h2>
                 <div className="flex gap-1.5 mt-0.5">
                   <button
                     onClick={(e) => onToggleBookmark(company.id, e)}
@@ -273,22 +273,22 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
                   </button>
                 </div>
               </div>
-              {company.domain && <p className="text-xs text-[#94A3B8] mt-0.5">{company.domain}</p>}
+              {company.domain && <p className="text-xs text-[#5E8D93] mt-0.5">{company.domain}</p>}
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[#F1F5F9] rounded-lg transition-colors ml-2 shrink-0">
+          <button onClick={onClose} className="p-2 hover:bg-[#EBF0EE] rounded-lg transition-colors ml-2 shrink-0">
             <CloseIcon />
           </button>
         </div>
 
         {/* Tab switcher */}
-        <div className="flex border-b border-[#E2E8F0] px-6 bg-[#F8FAFC]">
+        <div className="flex border-b border-[#D5E1DF] px-6 bg-[#F7F9F8]">
           <button
             onClick={() => setActiveTab('overview')}
             className={`py-3 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
               activeTab === 'overview'
-                ? 'border-[#2563EB] text-[#2563EB]'
-                : 'border-transparent text-[#64748B] hover:text-[#0F172A]'
+                ? 'border-[#06525C] text-[#06525C]'
+                : 'border-transparent text-[#2F737D] hover:text-[#06525C]'
             }`}
           >
             📋 Overview
@@ -297,8 +297,8 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
             onClick={() => setActiveTab('prep')}
             className={`py-3 px-4 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
               activeTab === 'prep'
-                ? 'border-[#2563EB] text-[#2563EB]'
-                : 'border-transparent text-[#64748B] hover:text-[#0F172A]'
+                ? 'border-[#06525C] text-[#06525C]'
+                : 'border-transparent text-[#2F737D] hover:text-[#06525C]'
             }`}
           >
             🎯 Prep Hub
@@ -309,7 +309,7 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
           <div className="p-6 space-y-5">
             {/* Stipend */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-2">Internship Stipend</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#5E8D93] mb-2">Internship Stipend</p>
               <span
                 className="text-sm font-bold px-3 py-1.5 rounded-lg border inline-block"
                 style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}
@@ -320,17 +320,17 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
 
             {/* Description */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-2">About</p>
-              <p className="text-sm text-[#64748B] leading-relaxed">{company.description}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#5E8D93] mb-2">About</p>
+              <p className="text-sm text-[#2F737D] leading-relaxed">{company.description}</p>
             </div>
 
             {/* Locations */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-2">Hiring Locations</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#5E8D93] mb-2">Hiring Locations</p>
               <div className="flex flex-wrap gap-2">
                 {company.location?.map(l => (
-                  <div key={l} className="flex items-center gap-1.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-3 py-1.5">
-                    <MapPin /><span className="text-xs font-medium text-[#0F172A]">{l}</span>
+                  <div key={l} className="flex items-center gap-1.5 bg-[#F7F9F8] border border-[#D5E1DF] rounded-lg px-3 py-1.5">
+                    <MapPin /><span className="text-xs font-medium text-[#06525C]">{l}</span>
                   </div>
                 ))}
               </div>
@@ -338,17 +338,17 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
 
             {/* Roles */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-2">Common Internship Roles</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#5E8D93] mb-2">Common Internship Roles</p>
               <div className="flex flex-wrap gap-2">
                 {company.roles?.map(r => (
-                  <span key={r} className="text-xs font-medium text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] px-3 py-1.5 rounded-lg">{r}</span>
+                  <span key={r} className="text-xs font-medium text-[#06525C] bg-[#E6F0EF] border border-[#B5D2D0] px-3 py-1.5 rounded-lg">{r}</span>
                 ))}
               </div>
             </div>
 
             {/* Categories */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-2">Category</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#5E8D93] mb-2">Category</p>
               <div className="flex flex-wrap gap-2">
                 {company.category?.map(c => (
                   <span key={c} className="text-xs font-semibold text-[#22C55E] bg-[#F0FDF4] border border-[#BBF7D0] px-3 py-1.5 rounded-lg">{c}</span>
@@ -361,40 +361,40 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
               href={company.careers}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-xl transition-colors mt-2"
+              className="flex items-center justify-center gap-2 w-full py-3 bg-[#06525C] hover:bg-[#043F47] text-white font-semibold rounded-xl transition-colors mt-2"
             >
               Visit Careers Page <ExternalIcon />
             </a>
           </div>
         ) : (
           <div className="p-6 space-y-6">
-            <div className="border-b border-[#E2E8F0] pb-3">
-              <h3 className="text-base font-extrabold text-[#0F172A]">Company Preparation Hub</h3>
-              <p className="text-xs text-[#64748B] mt-0.5">
+            <div className="border-b border-[#D5E1DF] pb-3">
+              <h3 className="text-base font-extrabold text-[#06525C]">Company Preparation Hub</h3>
+              <p className="text-xs text-[#2F737D] mt-0.5">
                 Curated insights from candidate experiences, blog posts, and hiring guidelines.
               </p>
             </div>
 
             {/* Resume Strategy */}
             {prep.resumeStrategy && (
-              <div className="bg-[#FAFBFD] border border-[#E2E8F0] rounded-xl p-5 space-y-4">
-                <h4 className="text-xs font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-[#F2F6F5] border border-[#D5E1DF] rounded-xl p-5 space-y-4">
+                <h4 className="text-xs font-extrabold text-[#06525C] uppercase tracking-wider flex items-center gap-1.5">
                   📝 Resume Strategy
                 </h4>
 
-                <div className="space-y-3.5 text-xs text-[#475569]">
+                <div className="space-y-3.5 text-xs text-[#2A6870]">
                   <div>
-                    <span className="font-bold text-[#0F172A]">Preferred Resume Length: </span>
-                    <span className="px-2 py-0.5 bg-white border border-[#E2E8F0] rounded-md font-medium text-[#64748B]">
+                    <span className="font-bold text-[#06525C]">Preferred Resume Length: </span>
+                    <span className="px-2 py-0.5 bg-white border border-[#D5E1DF] rounded-md font-medium text-[#2F737D]">
                       {prep.resumeStrategy.preferredLength}
                     </span>
                   </div>
 
                   <div>
-                    <span className="font-bold text-[#0F172A] block mb-1.5">Commonly Valued Technical Skills:</span>
+                    <span className="font-bold text-[#06525C] block mb-1.5">Commonly Valued Technical Skills:</span>
                     <div className="flex flex-wrap gap-1.5">
                       {prep.resumeStrategy.keySkills?.map(skill => (
-                        <span key={skill} className="px-2 py-1 bg-[#EFF6FF] border border-[#BFDBFE] text-[#2563EB] rounded-lg font-semibold text-[10px]">
+                        <span key={skill} className="px-2 py-1 bg-[#E6F0EF] border border-[#B5D2D0] text-[#06525C] rounded-lg font-semibold text-[10px]">
                           {skill}
                         </span>
                       ))}
@@ -402,8 +402,8 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
                   </div>
 
                   <div>
-                    <span className="font-bold text-[#0F172A] block mb-1.5">Preferred Project Types:</span>
-                    <ul className="list-disc pl-4 space-y-1 text-xs text-[#64748B]">
+                    <span className="font-bold text-[#06525C] block mb-1.5">Preferred Project Types:</span>
+                    <ul className="list-disc pl-4 space-y-1 text-xs text-[#2F737D]">
                       {prep.resumeStrategy.preferredProjects?.map((proj, i) => (
                         <li key={i} className="leading-relaxed">{proj}</li>
                       ))}
@@ -411,10 +411,10 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
                   </div>
 
                   <div>
-                    <span className="font-bold text-[#0F172A] block mb-2">Achievement-Based Bullet Point Examples:</span>
+                    <span className="font-bold text-[#06525C] block mb-2">Achievement-Based Bullet Point Examples:</span>
                     <div className="space-y-2">
                       {prep.resumeStrategy.bulletExamples?.map((bullet, i) => (
-                        <div key={i} className="p-3 bg-white border border-[#E2E8F0] border-l-4 border-l-[#10B981] rounded-r-xl text-xs font-mono text-[#334155] leading-relaxed shadow-sm">
+                        <div key={i} className="p-3 bg-white border border-[#D5E1DF] border-l-4 border-l-[#10B981] rounded-r-xl text-xs font-mono text-[#1F5F68] leading-relaxed shadow-sm">
                           "{bullet}"
                         </div>
                       ))}
@@ -425,7 +425,7 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
                     <span className="font-bold text-[#DC2626] block mb-1.5">Common Mistakes to Avoid:</span>
                     <ul className="space-y-1.5 pl-0.5">
                       {prep.resumeStrategy.commonMistakes?.map((mistake, i) => (
-                        <li key={i} className="flex items-start gap-2 text-xs text-[#64748B] leading-relaxed">
+                        <li key={i} className="flex items-start gap-2 text-xs text-[#2F737D] leading-relaxed">
                           <span className="text-[#DC2626] shrink-0 mt-0.5">⚠️</span>
                           <span>{mistake}</span>
                         </li>
@@ -438,12 +438,12 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
 
             {/* Skills Expected */}
             {prep.skills && (
-              <div className="bg-[#FAFBFD] border border-[#E2E8F0] rounded-xl p-5 space-y-3.5">
-                <h4 className="text-xs font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-[#F2F6F5] border border-[#D5E1DF] rounded-xl p-5 space-y-3.5">
+                <h4 className="text-xs font-extrabold text-[#06525C] uppercase tracking-wider flex items-center gap-1.5">
                   🛠️ Skills Expected & Importance
                 </h4>
 
-                <div className="divide-y divide-[#E2E8F0] space-y-3">
+                <div className="divide-y divide-[#D5E1DF] space-y-3">
                   {Object.entries(prep.skills).map(([skillKey, item]) => {
                     const labelMap = {
                       frontend: 'Frontend Development',
@@ -456,23 +456,23 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
                     };
                     const label = labelMap[skillKey] || skillKey;
 
-                    let badgeStyle = { bg: '#F8FAFC', text: '#64748B', border: '#E2E8F0', label: 'Low' };
+                    let badgeStyle = { bg: '#F7F9F8', text: '#2F737D', border: '#D5E1DF', label: 'Low' };
                     if (item.level?.toLowerCase() === 'high' || item.level?.toLowerCase() === 'h') {
                       badgeStyle = { bg: '#FEF2F2', text: '#EF4444', border: '#FCA5A5', label: 'High' };
                     } else if (item.level?.toLowerCase() === 'medium' || item.level?.toLowerCase() === 'm') {
-                      badgeStyle = { bg: '#EFF6FF', text: '#2563EB', border: '#BFDBFE', label: 'Medium' };
+                      badgeStyle = { bg: '#E6F0EF', text: '#06525C', border: '#B5D2D0', label: 'Medium' };
                     }
 
                     return (
                       <div key={skillKey} className="pt-3 first:pt-0">
                         <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <span className="text-xs font-bold text-[#0F172A]">{label}</span>
+                          <span className="text-xs font-bold text-[#06525C]">{label}</span>
                           <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full border uppercase tracking-wider"
                             style={{ backgroundColor: badgeStyle.bg, color: badgeStyle.text, borderColor: badgeStyle.border }}>
                             {badgeStyle.label}
                           </span>
                         </div>
-                        <p className="text-xs text-[#64748B] leading-relaxed pl-1">{item.note}</p>
+                        <p className="text-xs text-[#2F737D] leading-relaxed pl-1">{item.note}</p>
                       </div>
                     );
                   })}
@@ -482,14 +482,14 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
 
             {/* Interview Focus */}
             {prep.interviewFocus && (
-              <div className="bg-[#FAFBFD] border border-[#E2E8F0] rounded-xl p-5 space-y-3">
-                <h4 className="text-xs font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-[#F2F6F5] border border-[#D5E1DF] rounded-xl p-5 space-y-3">
+                <h4 className="text-xs font-extrabold text-[#06525C] uppercase tracking-wider flex items-center gap-1.5">
                   🎯 Interview Focus Areas
                 </h4>
                 <div className="flex flex-wrap gap-2 pl-0.5">
                   {prep.interviewFocus.map((focus, i) => (
-                    <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#334155] shadow-sm">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]" />
+                    <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D5E1DF] rounded-xl text-xs font-bold text-[#1F5F68] shadow-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#06525C]" />
                       {focus}
                     </span>
                   ))}
@@ -499,16 +499,16 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
 
             {/* Hiring Process */}
             {prep.hiringProcess && (
-              <div className="bg-[#FAFBFD] border border-[#E2E8F0] rounded-xl p-5 space-y-4">
-                <h4 className="text-xs font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-[#F2F6F5] border border-[#D5E1DF] rounded-xl p-5 space-y-4">
+                <h4 className="text-xs font-extrabold text-[#06525C] uppercase tracking-wider flex items-center gap-1.5">
                   🔄 Hiring Process
                 </h4>
-                <div className="relative border-l-2 border-[#CBD5E1] ml-3 pl-4 space-y-4 py-1">
+                <div className="relative border-l-2 border-[#C3D4D2] ml-3 pl-4 space-y-4 py-1">
                   {prep.hiringProcess.map((step, i) => (
                     <div key={i} className="relative text-xs">
-                      <div className="absolute -left-[22px] top-0.5 w-2.5 h-2.5 rounded-full bg-[#2563EB] border-2 border-white ring-4 ring-[#EFF6FF]" />
-                      <span className="font-extrabold text-[#0F172A] block mb-0.5">Stage {i + 1}</span>
-                      <span className="text-[#64748B] leading-relaxed">{step}</span>
+                      <div className="absolute -left-[22px] top-0.5 w-2.5 h-2.5 rounded-full bg-[#06525C] border-2 border-white ring-4 ring-[#E6F0EF]" />
+                      <span className="font-extrabold text-[#06525C] block mb-0.5">Stage {i + 1}</span>
+                      <span className="text-[#2F737D] leading-relaxed">{step}</span>
                     </div>
                   ))}
                 </div>
@@ -517,16 +517,16 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
 
             {/* Project Ideas */}
             {prep.projectIdeas && (
-              <div className="bg-[#FAFBFD] border border-[#E2E8F0] rounded-xl p-5 space-y-3.5">
-                <h4 className="text-xs font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-[#F2F6F5] border border-[#D5E1DF] rounded-xl p-5 space-y-3.5">
+                <h4 className="text-xs font-extrabold text-[#06525C] uppercase tracking-wider flex items-center gap-1.5">
                   💡 Suggested Portfolio Projects
                 </h4>
                 <div className="grid grid-cols-1 gap-3">
                   {prep.projectIdeas.map((idea, i) => (
-                    <div key={i} className="bg-white border border-[#E2E8F0] rounded-xl p-3.5 shadow-sm space-y-1.5">
-                      <h5 className="text-xs font-extrabold text-[#2563EB]">{idea.title}</h5>
-                      <p className="text-xs text-[#64748B] leading-relaxed">
-                        <span className="font-semibold text-[#475569]">Why it works:</span> {idea.why}
+                    <div key={i} className="bg-white border border-[#D5E1DF] rounded-xl p-3.5 shadow-sm space-y-1.5">
+                      <h5 className="text-xs font-extrabold text-[#06525C]">{idea.title}</h5>
+                      <p className="text-xs text-[#2F737D] leading-relaxed">
+                        <span className="font-semibold text-[#2A6870]">Why it works:</span> {idea.why}
                       </p>
                     </div>
                   ))}
@@ -536,16 +536,16 @@ function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggle
 
             {/* Scorecard */}
             {prep.scorecard && (
-              <div className="bg-[#FAFBFD] border border-[#E2E8F0] rounded-xl p-5 space-y-3.5">
-                <h4 className="text-xs font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-[#F2F6F5] border border-[#D5E1DF] rounded-xl p-5 space-y-3.5">
+                <h4 className="text-xs font-extrabold text-[#06525C] uppercase tracking-wider flex items-center gap-1.5">
                   ✅ Preparation Scorecard
                 </h4>
                 <div className="grid grid-cols-1 gap-2.5 pl-0.5">
                   {prep.scorecard.map((item, i) => (
-                    <label key={i} className="flex items-start gap-2.5 text-xs text-[#64748B] cursor-pointer hover:text-[#0F172A] transition-colors leading-relaxed">
+                    <label key={i} className="flex items-start gap-2.5 text-xs text-[#2F737D] cursor-pointer hover:text-[#06525C] transition-colors leading-relaxed">
                       <input
                         type="checkbox"
-                        className="mt-0.5 w-4 h-4 rounded border-[#CBD5E1] text-[#2563EB] focus:ring-[#2563EB]/25"
+                        className="mt-0.5 w-4 h-4 rounded border-[#C3D4D2] text-[#06525C] focus:ring-[#06525C]/25"
                       />
                       <span>{item}</span>
                     </label>
@@ -573,8 +573,8 @@ function FilterChips({ options, active, onChange }) {
           onClick={() => onChange(opt)}
           className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
             active === opt
-              ? 'bg-[#2563EB] text-white border-[#2563EB]'
-              : 'bg-white text-[#64748B] border-[#E2E8F0] hover:border-[#2563EB] hover:text-[#2563EB]'
+              ? 'bg-[#06525C] text-white border-[#06525C]'
+              : 'bg-white text-[#2F737D] border-[#D5E1DF] hover:border-[#06525C] hover:text-[#06525C]'
           }`}
         >
           {opt}
@@ -673,22 +673,22 @@ export default function CompaniesPage() {
   }, [baseList, search, filter, sort, pipelineFilter, bookmarked, applied]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F7F9F8]">
       {/* ── Page hero ── */}
-      <div className="bg-white border-b border-[#E2E8F0]">
+      <div className="bg-white border-b border-[#D5E1DF]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded-full mb-3">
-                <span className="text-xs font-bold text-[#2563EB]">🎓 Placement Portal</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#E6F0EF] border border-[#B5D2D0] rounded-full mb-3">
+                <span className="text-xs font-bold text-[#06525C]">🎓 Placement Portal</span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight">Companies Directory</h1>
-              <p className="text-[#64748B] mt-2 max-w-xl">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-[#06525C] tracking-tight">Companies Directory</h1>
+              <p className="text-[#2F737D] mt-2 max-w-xl">
                 Browse verified companies with stipend ranges, hiring locations, and direct career links. Track your applications and bookmarks in real-time.
               </p>
             </div>
             {/* Tab switcher */}
-            <div className="flex bg-[#F1F5F9] p-1 rounded-xl shrink-0 self-start sm:self-auto">
+            <div className="flex bg-[#EBF0EE] p-1 rounded-xl shrink-0 self-start sm:self-auto">
               {[
                 { value: 'it',  label: '💻 IT Companies',  count: IT_COMPANIES.length },
                 { value: 'ece', label: '🔌 ECE Companies', count: ECE_COMPANIES.length },
@@ -698,13 +698,13 @@ export default function CompaniesPage() {
                   onClick={() => switchTab(t.value)}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                     tab === t.value
-                      ? 'bg-white text-[#0F172A] shadow-sm'
-                      : 'text-[#64748B] hover:text-[#0F172A]'
+                      ? 'bg-white text-[#06525C] shadow-sm'
+                      : 'text-[#2F737D] hover:text-[#06525C]'
                   }`}
                 >
                   {t.label}
                   <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
-                    tab === t.value ? 'bg-[#EFF6FF] text-[#2563EB]' : 'bg-[#E2E8F0] text-[#64748B]'
+                    tab === t.value ? 'bg-[#E6F0EF] text-[#06525C]' : 'bg-[#D5E1DF] text-[#2F737D]'
                   }`}>
                     {t.count}
                   </span>
@@ -723,10 +723,10 @@ export default function CompaniesPage() {
 
         {/* Pipeline Quick Tracker Overview */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 flex items-center justify-between shadow-sm">
+          <div className="bg-white border border-[#D5E1DF] rounded-xl p-4 flex items-center justify-between shadow-sm">
             <div>
-              <p className="text-xs font-semibold text-[#64748B]">My Pipeline</p>
-              <h4 className="text-lg font-bold text-[#0F172A] mt-0.5">Tracker Dashboard</h4>
+              <p className="text-xs font-semibold text-[#2F737D]">My Pipeline</p>
+              <h4 className="text-lg font-bold text-[#06525C] mt-0.5">Tracker Dashboard</h4>
             </div>
             <span className="text-2xl">📋</span>
           </div>
@@ -735,11 +735,11 @@ export default function CompaniesPage() {
             className={`border rounded-xl p-4 flex items-center justify-between shadow-sm transition-all text-left ${
               pipelineFilter === 'interested'
                 ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-400/20'
-                : 'bg-white border-[#E2E8F0] hover:border-amber-300'
+                : 'bg-white border-[#D5E1DF] hover:border-amber-300'
             }`}
           >
             <div>
-              <p className="text-xs font-semibold text-[#64748B]">Interested Companies</p>
+              <p className="text-xs font-semibold text-[#2F737D]">Interested Companies</p>
               <h4 className="text-lg font-bold text-[#D97706] mt-0.5">{bookmarked.length} bookmarked</h4>
             </div>
             <span className="text-xl">⭐</span>
@@ -749,11 +749,11 @@ export default function CompaniesPage() {
             className={`border rounded-xl p-4 flex items-center justify-between shadow-sm transition-all text-left col-span-2 sm:col-span-1 ${
               pipelineFilter === 'applied'
                 ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-400/20'
-                : 'bg-white border-[#E2E8F0] hover:border-[#emerald-300]'
+                : 'bg-white border-[#D5E1DF] hover:border-[#emerald-300]'
             }`}
           >
             <div>
-              <p className="text-xs font-semibold text-[#64748B]">Applications Submitted</p>
+              <p className="text-xs font-semibold text-[#2F737D]">Applications Submitted</p>
               <h4 className="text-lg font-bold text-emerald-700 mt-0.5">{applied.length} applied</h4>
             </div>
             <span className="text-xl">📝</span>
@@ -764,7 +764,7 @@ export default function CompaniesPage() {
         <FeaturedCarousel companies={baseList} onSelect={setModal} />
 
         {/* Toolbar */}
-        <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 mb-6" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        <div className="bg-white border border-[#D5E1DF] rounded-xl p-4 mb-6" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <div className="flex flex-col gap-4">
             {/* Search + sort */}
             <div className="flex flex-col sm:flex-row gap-3">
@@ -777,7 +777,7 @@ export default function CompaniesPage() {
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder={tab === 'it' ? 'Search company, tech, location…' : 'Search company, domain, location…'}
-                  className="w-full border border-[#E2E8F0] rounded-xl pl-9 pr-3 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all"
+                  className="w-full border border-[#D5E1DF] rounded-xl pl-9 pr-3 py-2.5 text-sm text-[#06525C] placeholder:text-[#5E8D93] outline-none focus:border-[#06525C] focus:ring-2 focus:ring-[#06525C]/10 transition-all"
                 />
               </div>
               {/* Sort */}
@@ -785,7 +785,7 @@ export default function CompaniesPage() {
                 <select
                   value={sort}
                   onChange={e => setSort(e.target.value)}
-                  className="w-full border border-[#E2E8F0] rounded-xl px-3 py-2.5 pr-8 text-sm font-medium text-[#0F172A] bg-white outline-none focus:border-[#2563EB] cursor-pointer"
+                  className="w-full border border-[#D5E1DF] rounded-xl px-3 py-2.5 pr-8 text-sm font-medium text-[#06525C] bg-white outline-none focus:border-[#06525C] cursor-pointer"
                   style={{
                     backgroundImage: `url("data:image/svg+xml;utf8,<svg fill='%2394A3B8' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>")`,
                     backgroundPosition: 'right 8px center',
@@ -801,13 +801,13 @@ export default function CompaniesPage() {
 
             {/* Category filters */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold text-[#64748B] shrink-0">Filter:</span>
+              <span className="text-xs font-semibold text-[#2F737D] shrink-0">Filter:</span>
               <FilterChips options={filterOptions} active={filter} onChange={setFilter} />
             </div>
 
             {/* Pipeline Status Filter */}
-            <div className="flex items-center gap-2 pt-2 border-t border-[#F1F5F9] flex-wrap">
-              <span className="text-xs font-semibold text-[#64748B] shrink-0">Pipeline:</span>
+            <div className="flex items-center gap-2 pt-2 border-t border-[#EBF0EE] flex-wrap">
+              <span className="text-xs font-semibold text-[#2F737D] shrink-0">Pipeline:</span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPipelineFilter('all')}
@@ -846,11 +846,11 @@ export default function CompaniesPage() {
 
         {/* Result count */}
         <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-[#64748B]">
-            Showing <span className="font-bold text-[#0F172A]">{displayed.length}</span> of {baseList.length} companies
+          <p className="text-sm text-[#2F737D]">
+            Showing <span className="font-bold text-[#06525C]">{displayed.length}</span> of {baseList.length} companies
           </p>
           {(search || filter !== 'All' || pipelineFilter !== 'all') && (
-            <button onClick={() => { setSearch(''); setFilter('All'); setPipelineFilter('all'); }} className="text-xs font-semibold text-[#2563EB] hover:text-[#1D4ED8]">
+            <button onClick={() => { setSearch(''); setFilter('All'); setPipelineFilter('all'); }} className="text-xs font-semibold text-[#06525C] hover:text-[#043F47]">
               Clear filters
             </button>
           )}
@@ -858,10 +858,10 @@ export default function CompaniesPage() {
 
         {/* Grid */}
         {displayed.length === 0 ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-12 text-center shadow-sm animate-fade-in">
+          <div className="bg-white border border-[#D5E1DF] rounded-xl p-12 text-center shadow-sm animate-fade-in">
             <div className="text-4xl mb-3">🔍</div>
-            <h3 className="font-bold text-[#0F172A] mb-1">No companies found</h3>
-            <p className="text-sm text-[#64748B]">Try adjusting your filters or search terms.</p>
+            <h3 className="font-bold text-[#06525C] mb-1">No companies found</h3>
+            <p className="text-sm text-[#2F737D]">Try adjusting your filters or search terms.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

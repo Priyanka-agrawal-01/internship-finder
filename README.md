@@ -31,12 +31,16 @@ project_1/
 │   ├── test/                     # node:test unit tests
 │   └── .env.example
 │
-├── frontend/                     # React 19 + Vite + Tailwind CSS
+├── frontend/                     # Vite, two pages
+│   ├── index.html                # Landing page: static HTML on the design kit (no React)
+│   ├── app.html                  # The React app: app.html#jobs, #companies, #resources, #blog, #about, #alerts
+│   ├── public/assets/            # Design kit (taste-skill): CSS, motion, UI fragments, diagrams, effects.
+│   │                             #   Keep these files unedited: the kit's checks require them to ship as they are.
 │   ├── src/
 │   │   ├── components/           # Navbar, SearchFilter, JobCard
 │   │   ├── pages/                # Companies, Resources, Blog, About, Alerts
 │   │   ├── data/                 # Static content for the guide pages
-│   │   ├── App.jsx               # Home + jobs dashboard, filtering & sorting
+│   │   ├── App.jsx               # Jobs dashboard, filtering & sorting, hash routing
 │   │   └── main.jsx
 │   └── .env.example
 │
