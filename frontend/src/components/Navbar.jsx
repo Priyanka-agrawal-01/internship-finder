@@ -1,10 +1,12 @@
 import { useState } from 'react';
 
 /* ─── Icons ────────────────────────────────────────────────────────────────── */
-const BriefcaseIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="7" width="20" height="14" rx="2"/>
-    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+/* the InternPulse mark (three stacked bars), as on the landing page and the favicon */
+const StackMark = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="#06525C" aria-hidden="true">
+    <rect x="2" y="2.5" width="20" height="5.5" rx="2.75"/>
+    <rect x="2" y="9.25" width="14" height="5.5" rx="2.75"/>
+    <rect x="2" y="16" width="8" height="5.5" rx="2.75"/>
   </svg>
 );
 const MenuIcon = () => (
@@ -49,13 +51,9 @@ export default function Navbar({ jobsCount = 0, currentPage = 'home', onNavigate
         <div className="flex items-center justify-between h-16">
 
           {/* Logo */}
-          <button onClick={() => navigate('home')} className="flex items-center gap-2 shrink-0 focus:outline-none">
-            <div className="w-8 h-8 rounded-lg bg-[#06525C] flex items-center justify-center">
-              <BriefcaseIcon />
-            </div>
-            <span className="text-[#06525C] font-bold text-lg tracking-tight">
-              Intern<span className="text-[#06525C]">Pulse</span>
-            </span>
+          <button onClick={() => navigate('home')} className="flex items-center gap-2 shrink-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#06525C] focus-visible:ring-offset-2">
+            <StackMark />
+            <span className="text-[#06525C] font-semibold text-lg tracking-tight">InternPulse</span>
           </button>
 
           {/* Desktop nav */}

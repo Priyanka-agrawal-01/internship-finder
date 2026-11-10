@@ -137,6 +137,9 @@
      (the hero shows the same button on the first screen) */
   @media (max-width: 359px) { .nav:not(.is-open) .nav__actions { display: none; } }
   @media (max-width: 1023px) { .mo-pc__ui { padding: var(--s-4); } }
+  /* the steps not yet reached: a deeper teal than --muted (6.2:1 on the ground), so they still read at
+     4.5:1 or more while the section fades in on the scroll; the step reached stays in the ink */
+  @media (prefers-reduced-motion: no-preference) { #alerts.is-live .mo-pc__step:not(.is-on) h3 { color: #1f6670; } }
 
   .inbox__row { display: grid; gap: 2px; padding: 12px 16px; border-top: 1px solid var(--u-line); font-size: 13px; color: var(--u-muted); }
   .inbox__row b { font-weight: 500; font-size: 14px; color: var(--u-ink); }
@@ -167,6 +170,26 @@
   .freq__dot { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--u-muted); flex: none; }
   .freq__opt.is-on .freq__dot { border: 5px solid var(--u-accent, #06525c); }
   .freq { padding: 16px; }
+
+  /* short windows (a laptop under its browser bars, a small browser pane): the kit sets the hero, and every
+     section from 1280 up, to exact screens, so what a short screen could not hold ran over the next section.
+     Here each keeps at least its screens and grows past them instead, as the kit already does for sections
+     from 640 to 1279 and for the hero on a phone (the pinned steps keep their own heights); where the content
+     fits nothing changes */
+  @media (min-width: 640px) {
+    main > .hero { height: auto; min-height: 100vh; min-height: 100svh; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr; }
+    main > .hero > .wrap { height: auto; }
+  }
+  /* the pictures that take what the screen leaves keep a useful least height, so a short screen grows the
+     section rather than squeeze them to a sliver (the feed window is 393 and the hero picture 584 at 1024x768) */
+  #feed .app.fill { min-height: 320px; }
+  @media (max-width: 639px) { #feed .app.fill { min-height: 260px; } }
+  @media (min-width: 640px) and (max-width: 1023px) { .hero__art { min-height: 300px; } }
+  @media (min-width: 1280px) {
+    main > section:not(.hero, [data-moment]), footer.closing { height: auto; min-height: calc(var(--h, 1) * 100vh); min-height: calc(var(--h, 1) * 100svh); }
+    :where(main > section:not(.hero, [data-moment]), footer.closing) { display: flex; flex-direction: column; }
+    main > section:not(.hero, [data-moment]) > .wrap, footer.closing > .wrap { flex: 1 0 auto; height: auto; min-height: 0; }
+  }
 </style>
 </head>
 <body>
