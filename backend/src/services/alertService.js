@@ -29,6 +29,25 @@ function isDue(sub, now) {
   return hoursSince >= minHours;
 }
 
+/** The cycle's key: its UTC hour, e.g. "2026-11-10T19". */
+const cycleKey = date => date.toISOString().slice(0, 13);
+
+/**
+ * Claim this hour's cycle for this server. Returns false when another server
+ * that shares the database (a local dev server and the deployed one, say)
+ * already claimed it, so subscribers never get the same alert twice.
+ */
+async function claimCycle(date) {
+  const AlertRun = require('../models/AlertRun');
+  try {
+    await AlertRun.create({ _id: cycleKey(date), host: require('os').hostname() });
+    return true;
+  } catch (err) {
+    if (err.code === 11000) return false;
+    throw err;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  MAIN ALERT CYCLE
 //  1. Fetch current jobs and record any we haven't seen before (JobSnapshot)
@@ -47,15 +66,38 @@ async function runAlertCycle() {
     return;
   }
 
+  const startedAt = new Date();
+  if (!(await claimCycle(startedAt))) {
+    console.log('[AlertService] Another server sharing this database already ran this hour\'s cycle — skipping.');
+    return;
+  }
+
+  // what this cycle did, kept on its AlertRun for the admin panel
+  const stats = { jobs: 0, newJobs: 0, subscribers: 0, due: 0, sent: 0, failed: 0, error: '' };
+  try {
+    await alertCycleBody(stats);
+  } catch (err) {
+    stats.error = err.message;
+    throw err;
+  } finally {
+    await require('../models/AlertRun')
+      .updateOne({ _id: cycleKey(startedAt) }, { $set: { ...stats, finishedAt: new Date() } })
+      .catch(err => console.error('[AlertService] Could not record the cycle:', err.message));
+  }
+}
+
+async function alertCycleBody(stats) {
   const { Subscriber, JobSnapshot } = getModels();
 
   // 1. Fetch all current live jobs
   let freshJobs;
   try {
     freshJobs = await getJobs();
+    stats.jobs = freshJobs.length;
     console.log(`[AlertService] Fetched ${freshJobs.length} current jobs`);
   } catch (err) {
     console.error('[AlertService] Job fetch failed:', err.message);
+    stats.error = `Job fetch failed: ${err.message}`;
     return;
   }
 
@@ -65,6 +107,7 @@ async function runAlertCycle() {
     (await JobSnapshot.find({ jobId: { $in: ids } }, { jobId: 1, _id: 0 }).lean()).map(s => s.jobId)
   );
   const newJobs = freshJobs.filter(j => j.id && !known.has(j.id));
+  stats.newJobs = newJobs.length;
   console.log(`[AlertService] ${newJobs.length} new jobs detected (${freshJobs.length - newJobs.length} already known)`);
 
   if (newJobs.length > 0) {
@@ -98,6 +141,8 @@ async function runAlertCycle() {
   const now = Date.now();
   const subscribers = await Subscriber.find({ active: true }).lean();
   const due = subscribers.filter(sub => isDue(sub, now));
+  stats.subscribers = subscribers.length;
+  stats.due = due.length;
   console.log(`[AlertService] ${due.length} of ${subscribers.length} active subscribers are due this cycle`);
   if (due.length === 0) return;
 
@@ -129,9 +174,11 @@ async function runAlertCycle() {
         { $set: { lastAlertSentAt: new Date() }, $inc: { alertCount: 1 } }
       );
       emailsSent++;
+      stats.sent++;
       console.log(`[AlertService] ✉ Alert sent to ${sub.email} (${toSend.length} jobs)`);
     } catch (err) {
       emailsFailed++;
+      stats.failed++;
       console.error(`[AlertService] ✗ Failed to email ${sub.email}:`, err.message);
     }
   }
@@ -161,4 +208,4 @@ function startAlertScheduler() {
   return schedule;
 }
 
-module.exports = { startAlertScheduler, runAlertCycle, isDue, DEFAULT_ALERT_CRON };
+module.exports = { startAlertScheduler, runAlertCycle, isDue, cycleKey, DEFAULT_ALERT_CRON };

@@ -1,13 +1,8 @@
 import { useState } from 'react';
 import axios from 'axios';
 
-const getBackendUrl = () => {
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    return 'http://localhost:5000';
-  }
-  return import.meta.env.VITE_API_URL || 'http://localhost:5000';
-};
-const BACKEND_URL = getBackendUrl();
+import { BACKEND_URL } from '../lib/api';
+import { useAuth } from '../auth/authContext';
 
 const PREF_LABELS = [
   { key: 'itCompanies',       label: '💻 IT Companies' },
@@ -31,7 +26,9 @@ const FREQUENCIES = [
 ];
 
 export default function AlertsPage() {
-  const [email, setEmail] = useState('');
+  const { user } = useAuth();
+  // signed in: start from the account's address (it can still be changed)
+  const [email, setEmail] = useState(() => user?.email || '');
   
   // State for preferences checkboxes
   const [prefs, setPrefs] = useState({

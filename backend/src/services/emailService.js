@@ -422,10 +422,39 @@ async function sendUnsubscribeLinkEmail(recipientEmail, unsubscribeToken) {
   return { messageId: info.messageId, previewUrl };
 }
 
+/**
+ * A short email to the admin's own address, sent from the admin panel to check that
+ * mail goes out (and whether it lands in the inbox or in spam).
+ */
+async function sendTestEmail(recipientEmail) {
+  const { transporter, isTestAccount } = await getTransporter();
+  const sentAt = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#06525C;">InternPulse can send email</h1>
+    <p style="margin:0;color:#2F737D;font-size:14px;line-height:1.6;">
+      This test was sent from the admin panel at ${escapeHtml(sentAt)} (IST). If it reached your inbox,
+      welcome emails and job alerts will too. If it is in spam, mark it "Not spam".
+    </p>`;
+  const info = await withTimeout(
+    transporter.sendMail({
+      from:    FROM_ADDRESS,
+      to:      recipientEmail,
+      subject: 'InternPulse test email',
+      html:    wrapLayout(body, 'A test from the InternPulse admin panel'),
+      text:    `InternPulse can send email. This test was sent from the admin panel at ${sentAt} (IST).`,
+    }),
+    SEND_TIMEOUT_MS,
+    'sendTestEmail'
+  );
+  const previewUrl = isTestAccount ? nodemailer.getTestMessageUrl(info) : null;
+  return { messageId: info.messageId, previewUrl, testInbox: !!isTestAccount };
+}
+
 module.exports = {
   sendWelcomeEmail,
   sendJobAlertEmail,
   sendUnsubscribeLinkEmail,
+  sendTestEmail,
   sendSubscriptionEmail: sendWelcomeEmail,
   // exported for tests
   jobCardHtml,
