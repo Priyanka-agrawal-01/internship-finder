@@ -46,7 +46,7 @@ function FounderAvatar() {
   return (
     <div className="relative shrink-0">
       <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl flex items-center justify-center text-5xl sm:text-6xl font-extrabold text-white"
-        style={{ background: 'linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)' }}>
+        style={{ background: 'linear-gradient(135deg, #06525C 0%, #A16207 100%)' }}>
         PA
       </div>
       <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-[#22C55E] flex items-center justify-center border-2 border-white">
@@ -59,18 +59,18 @@ function FounderAvatar() {
 /* ─── Main AboutPage ─────────────────────────────────────────────────────────── */
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F7F9F8]">
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-[#E2E8F0]">
+      <div className="bg-white border-b border-[#D5E1DF]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded-full mb-4">
-            <span className="text-xs font-bold text-[#2563EB]">👋 Meet the Founder</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#E6F0EF] border border-[#B5D2D0] rounded-full mb-4">
+            <span className="text-xs font-bold text-[#06525C]">👋 Meet the Founder</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] tracking-tight mb-3">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-[#06525C] tracking-tight mb-3">
             About InternPulse
           </h1>
-          <p className="text-[#64748B] text-lg max-w-2xl leading-relaxed">
+          <p className="text-[#2F737D] text-lg max-w-2xl leading-relaxed">
             A placement platform built by a student, for students — because finding a good internship shouldn't be this hard.
           </p>
         </div>
@@ -79,22 +79,22 @@ export default function AboutPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-10">
 
         {/* ── Founder card ─────────────────────────────────────────────────── */}
-        <section className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden"
+        <section className="bg-white border border-[#D5E1DF] rounded-2xl overflow-hidden"
           style={{ boxShadow:'0 1px 3px rgba(0,0,0,0.06)' }}>
           <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-0">
             {/* Left — avatar + links */}
-            <div className="p-8 flex flex-col items-center gap-5 border-b md:border-b-0 md:border-r border-[#E2E8F0] bg-[#FAFBFD] md:min-w-[220px]">
+            <div className="p-8 flex flex-col items-center gap-5 border-b md:border-b-0 md:border-r border-[#D5E1DF] bg-[#F2F6F5] md:min-w-[220px]">
               <FounderAvatar />
               <div className="text-center">
-                <h2 className="text-lg font-extrabold text-[#0F172A]">Priyanka Agrawal</h2>
-                <p className="text-xs text-[#64748B] mt-1">Electronics & Communication · Full Stack Dev</p>
-                <p className="text-xs font-semibold text-[#2563EB] mt-1">Founder, InternPulse</p>
+                <h2 className="text-lg font-extrabold text-[#06525C]">Priyanka Agrawal</h2>
+                <p className="text-xs text-[#2F737D] mt-1">Electronics & Communication · Full Stack Dev</p>
+                <p className="text-xs font-semibold text-[#06525C] mt-1">Founder, InternPulse</p>
               </div>
               {/* Social links */}
               <div className="flex flex-col gap-2 w-full">
                 <a href="https://github.com/Priyanka-agrawal-01"
                   target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 px-3 py-2.5 bg-[#0F172A] text-white rounded-xl text-xs font-semibold hover:bg-[#1E293B] transition-colors">
+                  className="flex items-center gap-2.5 px-3 py-2.5 bg-[#06525C] text-white rounded-xl text-xs font-semibold hover:bg-[#06424A] transition-colors">
                   <GithubIcon /> GitHub
                 </a>
                 <a href="https://www.linkedin.com/in/priyanka-agrawal01"
@@ -103,7 +103,7 @@ export default function AboutPage() {
                   <LinkedinIcon /> LinkedIn
                 </a>
                 <a href="mailto:priyankaagrawalofficial01@gmail.com"
-                  className="flex items-center gap-2.5 px-3 py-2.5 border border-[#E2E8F0] text-[#0F172A] rounded-xl text-xs font-semibold hover:border-[#2563EB] hover:text-[#2563EB] transition-colors bg-white">
+                  className="flex items-center gap-2.5 px-3 py-2.5 border border-[#D5E1DF] text-[#06525C] rounded-xl text-xs font-semibold hover:border-[#06525C] hover:text-[#06525C] transition-colors bg-white">
                   <MailIcon /> Email Me
                 </a>
               </div>
@@ -112,16 +112,16 @@ export default function AboutPage() {
             {/* Right — bio */}
             <div className="p-8">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-1 h-6 rounded-full bg-[#2563EB]" />
-                <h3 className="text-base font-extrabold text-[#0F172A]">About Me</h3>
+                <div className="w-1 h-6 rounded-full bg-[#06525C]" />
+                <h3 className="text-base font-extrabold text-[#06525C]">About Me</h3>
               </div>
 
-              <div className="space-y-3 text-[#374151] text-[15px] leading-[1.8]">
+              <div className="space-y-3 text-[#2A6870] text-[15px] leading-[1.8]">
                 <p>
-                  Hi, I'm <strong className="text-[#0F172A]">Priyanka Agrawal</strong>, an Electronics and Communication undergraduate passionate about web development, software engineering, problem solving, and building products that help students discover better career opportunities.
+                  Hi, I'm <strong className="text-[#06525C]">Priyanka Agrawal</strong>, an Electronics and Communication undergraduate passionate about web development, software engineering, problem solving, and building products that help students discover better career opportunities.
                 </p>
                 <p>
-                  <strong className="text-[#0F172A]">InternPulse</strong> was created to simplify internship discovery and make placement preparation more accessible for students. I noticed that finding quality internships required visiting a dozen different platforms, manually filtering through hundreds of unrelated listings, and never knowing when new openings appeared.
+                  <strong className="text-[#06525C]">InternPulse</strong> was created to simplify internship discovery and make placement preparation more accessible for students. I noticed that finding quality internships required visiting a dozen different platforms, manually filtering through hundreds of unrelated listings, and never knowing when new openings appeared.
                 </p>
                 <p>
                   So I built InternPulse — a single platform that aggregates listings from multiple real-time sources, filters them specifically for India, sends alerts the moment new openings appear, and provides all the preparation resources a student needs in one place.
@@ -129,11 +129,11 @@ export default function AboutPage() {
               </div>
 
               {/* Skills / interests */}
-              <div className="mt-5 pt-5 border-t border-[#F1F5F9]">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-3">Interests & Skills</p>
+              <div className="mt-5 pt-5 border-t border-[#EBF0EE]">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#5E8D93] mb-3">Interests & Skills</p>
                 <div className="flex flex-wrap gap-2">
                   {['Full Stack Development','React & Node.js','Problem Solving','ECE / VLSI','Open Source','Product Thinking','DSA','System Design'].map(s => (
-                    <span key={s} className="px-3 py-1 text-xs font-semibold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-full">{s}</span>
+                    <span key={s} className="px-3 py-1 text-xs font-semibold text-[#06525C] bg-[#E6F0EF] border border-[#B5D2D0] rounded-full">{s}</span>
                   ))}
                 </div>
               </div>
@@ -142,27 +142,27 @@ export default function AboutPage() {
         </section>
 
         {/* ── About InternPulse ─────────────────────────────────────────────── */}
-        <section className="bg-white border border-[#E2E8F0] rounded-2xl p-8"
+        <section className="bg-white border border-[#D5E1DF] rounded-2xl p-8"
           style={{ boxShadow:'0 1px 3px rgba(0,0,0,0.06)' }}>
           <div className="flex items-center gap-2 mb-6">
             <div className="w-1 h-6 rounded-full bg-[#22C55E]" />
-            <h2 className="text-xl font-extrabold text-[#0F172A]">What is InternPulse?</h2>
+            <h2 className="text-xl font-extrabold text-[#06525C]">What is InternPulse?</h2>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <div>
-              <p className="text-[15px] text-[#374151] leading-[1.8] mb-4">
+              <p className="text-[15px] text-[#2A6870] leading-[1.8] mb-4">
                 InternPulse is a real-time internship aggregation platform built specifically for Indian students in CS, ECE, and related engineering disciplines.
               </p>
-              <p className="text-[15px] text-[#374151] leading-[1.8]">
+              <p className="text-[15px] text-[#2A6870] leading-[1.8]">
                 Unlike generic job boards, InternPulse is focused on one goal: helping students at every stage — from building their first project to landing their first offer — with real-time job data, curated preparation resources, and intelligent job alerts.
               </p>
             </div>
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-3">How InternPulse helps you</p>
+            <div className="bg-[#F7F9F8] border border-[#D5E1DF] rounded-xl p-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#5E8D93] mb-3">How InternPulse helps you</p>
               <ul className="space-y-2">
                 {HOW_IT_HELPS.map((item, i) => (
-                  <li key={i} className="flex gap-2.5 text-xs text-[#64748B] leading-relaxed">
+                  <li key={i} className="flex gap-2.5 text-xs text-[#2F737D] leading-relaxed">
                     <CheckIcon /><span>{item}</span>
                   </li>
                 ))}
@@ -173,10 +173,10 @@ export default function AboutPage() {
           {/* Feature grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {PLATFORM_FEATURES.map((f, i) => (
-              <div key={i} className="border border-[#E2E8F0] rounded-xl p-4 bg-[#FAFBFD]">
+              <div key={i} className="border border-[#D5E1DF] rounded-xl p-4 bg-[#F2F6F5]">
                 <div className="text-2xl mb-2">{f.emoji}</div>
-                <h4 className="text-sm font-bold text-[#0F172A] mb-1">{f.title}</h4>
-                <p className="text-xs text-[#64748B] leading-relaxed">{f.desc}</p>
+                <h4 className="text-sm font-bold text-[#06525C] mb-1">{f.title}</h4>
+                <p className="text-xs text-[#2F737D] leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -190,21 +190,21 @@ export default function AboutPage() {
             { value: 'Every 6h',label: 'Alert Frequency',    emoji: '🔔' },
             { value: '100%',    label: 'Free Forever',       emoji: '❤️' },
           ].map(s => (
-            <div key={s.label} className="bg-white border border-[#E2E8F0] rounded-2xl p-5 text-center"
+            <div key={s.label} className="bg-white border border-[#D5E1DF] rounded-2xl p-5 text-center"
               style={{ boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
               <div className="text-2xl mb-2">{s.emoji}</div>
-              <div className="text-2xl font-extrabold text-[#0F172A]">{s.value}</div>
-              <div className="text-xs text-[#64748B] mt-1">{s.label}</div>
+              <div className="text-2xl font-extrabold text-[#06525C]">{s.value}</div>
+              <div className="text-xs text-[#2F737D] mt-1">{s.label}</div>
             </div>
           ))}
         </section>
 
         {/* ── Built with ────────────────────────────────────────────────────── */}
-        <section className="bg-white border border-[#E2E8F0] rounded-2xl p-8"
+        <section className="bg-white border border-[#D5E1DF] rounded-2xl p-8"
           style={{ boxShadow:'0 1px 3px rgba(0,0,0,0.06)' }}>
           <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-6 rounded-full bg-[#7C3AED]" />
-            <h2 className="text-xl font-extrabold text-[#0F172A]">Tech Stack</h2>
+            <div className="w-1 h-6 rounded-full bg-[#A16207]" />
+            <h2 className="text-xl font-extrabold text-[#06525C]">Tech Stack</h2>
           </div>
           <div className="flex flex-wrap gap-3">
             {[
@@ -212,15 +212,15 @@ export default function AboutPage() {
               'MongoDB','Mongoose','node-cron','Nodemailer',
               'Remotive API','Arbeitnow API','The Muse API','Adzuna API',
             ].map(t => (
-              <span key={t} className="px-3 py-1.5 text-xs font-semibold text-[#374151] bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg">{t}</span>
+              <span key={t} className="px-3 py-1.5 text-xs font-semibold text-[#2A6870] bg-[#F7F9F8] border border-[#D5E1DF] rounded-lg">{t}</span>
             ))}
           </div>
 
-          <div className="mt-6 pt-6 border-t border-[#F1F5F9]">
-            <p className="text-sm text-[#64748B]">Open source and built for learning. Contributions are welcome.</p>
+          <div className="mt-6 pt-6 border-t border-[#EBF0EE]">
+            <p className="text-sm text-[#2F737D]">Open source and built for learning. Contributions are welcome.</p>
             <a href="https://github.com/Priyanka-agrawal-01/internpulse"
               target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 mt-3 px-4 py-2.5 bg-[#0F172A] text-white text-sm font-semibold rounded-xl hover:bg-[#1E293B] transition-colors">
+              className="inline-flex items-center gap-2 mt-3 px-4 py-2.5 bg-[#06525C] text-white text-sm font-semibold rounded-xl hover:bg-[#06424A] transition-colors">
               <GithubIcon /> View on GitHub
             </a>
           </div>

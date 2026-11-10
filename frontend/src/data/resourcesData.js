@@ -5,9 +5,9 @@ export const RESOURCE_CATEGORIES = [
     id: 'resume',
     label: 'Resume Preparation',
     emoji: '📄',
-    color: '#2563EB',
-    bg: '#EFF6FF',
-    border: '#BFDBFE',
+    color: '#06525C',
+    bg: '#E6F0EF',
+    border: '#B5D2D0',
     resources: [
       {
         id: 'ats-guide',
@@ -42,9 +42,9 @@ export const RESOURCE_CATEGORIES = [
     id: 'dsa',
     label: 'DSA Preparation',
     emoji: '🧠',
-    color: '#7C3AED',
-    bg: '#F5F3FF',
-    border: '#DDD6FE',
+    color: '#A16207',
+    bg: '#FEFCE8',
+    border: '#FDE68A',
     resources: [
       {
         id: 'dsa-roadmap',

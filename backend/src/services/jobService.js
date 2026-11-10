@@ -49,14 +49,21 @@ function detectWorkMode(location = '', isRemoteFlag = false) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  INTERNSHIP DETECTION
 // ─────────────────────────────────────────────────────────────────────────────
+// Matched as whole words so "International", "Internal" and "Internet" don't
+// count as internships. Includes the German, Dutch and French terms that the
+// European boards (mostly Arbeitnow) use.
 const INTERN_KW = [
-  'intern', 'internship', 'co-op', 'coop', 'placement', 'student',
-  'apprentice', 'trainee', 'fellowship', 'graduate program', 'fresher',
-  'entry level', 'entry-level', 'campus', 'summer program',
+  'intern', 'interns', 'internship', 'internships', 'co-op', 'coop', 'placement',
+  'student', 'students', 'working student', 'werkstudent', 'werkstudentin', 'werkstudent:in',
+  'praktikum', 'praktikant', 'praktikantin', 'stagiaire', 'alternance', 'stage',
+  'apprentice', 'apprenticeship', 'trainee', 'traineeship', 'fellowship', 'graduate program',
+  'graduate programme', 'fresher', 'freshers', 'entry level', 'entry-level', 'campus', 'summer program',
 ];
+const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const INTERN_RE = new RegExp(`(?:^|[^\\p{L}\\p{N}])(?:${INTERN_KW.map(escapeRe).join('|')})(?=$|[^\\p{L}\\p{N}])`, 'iu');
+
 function checkIsInternship(title = '', tags = [], type = '') {
-  const hay = (title + ' ' + tags.join(' ') + ' ' + type).toLowerCase();
-  return INTERN_KW.some(k => hay.includes(k));
+  return INTERN_RE.test(`${title} ${tags.join(' ')} ${type}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
