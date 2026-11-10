@@ -1,8 +1,6 @@
 # InternPulse 🚀
 
-InternPulse is a modern, responsive, and fully-functional full-stack internship and remote job aggregator. It fetches active job postings from public APIs, merges and filters them, and offers an email notification subscription service powered by Nodemailer.
-
-This application is built with a **beginner-friendly, clean, and highly readable architecture**, making it an excellent resume project.
+InternPulse is a full-stack internship and job aggregator. It pulls live postings from public job APIs, merges and de-duplicates them, and lets students subscribe to email alerts for new internships that match their interests.
 
 ---
 
@@ -10,165 +8,128 @@ This application is built with a **beginner-friendly, clean, and highly readable
 
 ```text
 project_1/
-├── backend/                  # Node.js + Express.js backend
+├── backend/                      # Node.js + Express API
 │   ├── src/
 │   │   ├── config/
-│   │   │   └── mail.js       # Nodemailer SMTP & Ethereal setup
-│   │   ├── services/
-│   │   │   ├── jobService.js # Public job API fetching & caching service
-│   │   │   └── emailService.js # Subscription confirmation email compiler
+│   │   │   ├── db.js             # MongoDB connection (optional — app runs without it)
+│   │   │   └── mail.js           # Nodemailer transport: SMTP → Gmail → Ethereal → console
+│   │   ├── middleware/
+│   │   │   └── security.js       # Rate limiting, admin-token check, async error wrapper
+│   │   ├── models/
+│   │   │   ├── Subscriber.js     # Alert subscribers + preferences
+│   │   │   └── JobSnapshot.js    # Every job ever seen (used to detect new ones)
 │   │   ├── routes/
-│   │   │   ├── jobRoutes.js  # GET /api/jobs router
-│   │   │   └── subscribeRoutes.js # POST /api/subscribe router
-│   │   └── server.js         # Entry point for the Express server
-│   ├── .env.example          # Environment variables template
-│   ├── .env                  # Local environment file
-│   └── package.json          # Backend dependencies
+│   │   │   ├── jobRoutes.js      # /api/jobs
+│   │   │   └── subscribeRoutes.js# /api/subscribe
+│   │   ├── services/
+│   │   │   ├── jobService.js     # Fetches, normalises, caches jobs from 5 APIs
+│   │   │   ├── jobMatcher.js     # Matches jobs to alert preferences (pure functions)
+│   │   │   ├── alertService.js   # Hourly cron that emails new matching jobs
+│   │   │   └── emailService.js   # Welcome / alert / unsubscribe email templates
+│   │   ├── utils/                # HTML escaping, input validation
+│   │   └── server.js             # Express entry point
+│   ├── test/                     # node:test unit tests
+│   └── .env.example
 │
-├── frontend/                 # React + Tailwind CSS frontend
+├── frontend/                     # React 19 + Vite + Tailwind CSS
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── Navbar.jsx    # Glassmorphic navbar & posting counter
-│   │   │   ├── SearchFilter.jsx # Multi-functional search and filter controls
-│   │   │   ├── JobCard.jsx   # Job card with dynamic metadata & 'New' badges
-│   │   │   └── SubscribeForm.jsx # Interactive newsletter email form
-│   │   ├── App.jsx           # Parent coordinate hub & filter logic
-│   │   ├── index.css         # Styling, custom scrollbar & animations
-│   │   └── main.jsx          # React renderer entry point
-│   ├── index.html            # Core HTML skeleton & viewport meta
-│   ├── tailwind.config.js    # Tailwind palette overrides
-│   ├── postcss.config.js     # PostCSS CSS parser configuration
-│   └── package.json          # Frontend packages & build scripts
+│   │   ├── components/           # Navbar, SearchFilter, JobCard
+│   │   ├── pages/                # Companies, Resources, Blog, About, Alerts
+│   │   ├── data/                 # Static content for the guide pages
+│   │   ├── App.jsx               # Home + jobs dashboard, filtering & sorting
+│   │   └── main.jsx
+│   └── .env.example
 │
-└── README.md                 # Project guide (this file)
+└── README.md
 ```
 
 ---
 
-## ⚡ Quick Start & Run Commands
+## ⚡ Quick Start
 
-Follow these steps to run both the backend and frontend locally:
+Requires [Node.js](https://nodejs.org/) 20 or newer.
 
-### 1. Prerequisite
-Ensure you have [Node.js](https://nodejs.org/) installed (v18.0.0 or higher is recommended).
-
-### 2. Setup the Backend
-Navigate to the `backend` directory, install packages, set up configurations, and boot the server:
+### Backend
 ```bash
-# Move to backend folder
 cd backend
-
-# Install Node dependencies
 npm install
-
-# Initialize your environmental variables
-copy .env.example .env
-
-# Start the server (runs on http://localhost:5000)
-npm start
+cp .env.example .env      # Windows: copy .env.example .env
+npm run dev               # http://localhost:5000 (auto-reloads)
 ```
-> [!TIP]
-> You can also run `npm run dev` to launch the server using `nodemon` which will automatically reload the application whenever you make code adjustments.
 
-### 3. Setup the Frontend
-Open a new terminal window, navigate to the `frontend` directory, install packages, and boot the Vite development server:
+### Frontend
 ```bash
-# Move to frontend folder
 cd frontend
-
-# Install React dependencies
 npm install
+npm run dev               # http://localhost:5173
+```
 
-# Run the local development server (runs on http://localhost:5173)
-npm run dev
+### Checks
+```bash
+cd backend  && npm test       # unit tests
+cd frontend && npm run lint   # ESLint
+cd frontend && npm run build  # production build
 ```
 
 ---
 
-## ⚙️ Environment Variables Setup
+## ⚙️ Environment Variables
 
-### Backend Environment (`backend/.env`)
-By default, the backend requires **zero initial configuration**. If you boot it with blank email variables, it will automatically register a temporary, sandboxed test mailbox at `ethereal.email` and print the visual preview links directly inside your terminal when emails are sent.
+All backend variables are documented in [`backend/.env.example`](backend/.env.example). The backend runs with **zero configuration**: without `MONGODB_URI` subscriptions are kept in memory (and alerts are off), and without SMTP settings emails go to a throwaway [Ethereal](https://ethereal.email) inbox whose preview links are printed in the log.
 
-To connect your own real email account, modify your `backend/.env` file:
-```env
-PORT=5000
-NODE_ENV=development
-FRONTEND_URL=http://localhost:5173
+| Variable | Purpose |
+|---|---|
+| `FRONTEND_URL` | Allowed CORS origin(s), comma-separated. The first is used for links in emails. **Must include your deployed frontend URL** or the browser will block API calls. |
+| `BACKEND_URL` | Public URL of the API, used for unsubscribe links in emails. Falls back to Render's `RENDER_EXTERNAL_URL`. |
+| `MONGODB_URI` | Enables persistent subscribers and job alerts. |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` / `EMAIL_FROM` | Real email delivery. Or use `EMAIL_SERVICE` / `EMAIL_USER` / `EMAIL_PASS` for Gmail (needs a 16-character App Password). |
+| `ADZUNA_APP_ID` / `ADZUNA_APP_KEY`, `RAPIDAPI_KEY` | Optional keyed job sources (Adzuna, JSearch). |
+| `ADMIN_TOKEN` | Enables admin endpoints; send it as the `x-admin-token` header. Unset = endpoints disabled. |
+| `ALERT_CRON` | Alert schedule, default hourly (`0 * * * *`). |
 
-# Real Email SMTP Settings (optional)
-EMAIL_SERVICE=gmail
-EMAIL_USER=your_gmail_address@gmail.com
-EMAIL_PASS=your_gmail_app_password
-```
-*(Note: If using Gmail, you must generate a 16-digit "App Password" under your Google Account security settings instead of your regular password).*
+Frontend: set `VITE_API_URL` to the deployed backend URL (see [`frontend/.env.example`](frontend/.env.example)). On `localhost` the app always talks to `http://localhost:5000`.
 
-### Frontend Environment (`frontend/.env`)
-For local testing, the frontend defaults to communicating with `http://localhost:5000`. To point the frontend to a deployed production server, create a file named `.env` in the `frontend/` directory:
-```env
-VITE_API_URL=https://your-backend-render-url.onrender.com
-```
+> Never commit `.env` files. If one was ever pushed, rotate every secret in it — deleting the file does not remove it from git history.
 
 ---
 
-## 🌐 How InternPulse Works
+## 🌐 How It Works
 
-### 1. How Frontend Communicates with Backend
-*   The React application uses **Axios** to send HTTP requests to the backend server.
-*   Upon mounting, `App.jsx` triggers a `GET` request to `${BACKEND_URL}/api/jobs`. The fetched listings are stored in React state.
-*   When a user inputs an email into the newsletter form, the `SubscribeForm.jsx` sends a `POST` request to `${BACKEND_URL}/api/subscribe` containing `{ email }` in the request body.
+### Job fetching & caching
+- `jobService.js` queries **Remotive, Arbeitnow, The Muse** (free) and **Adzuna, JSearch** (keyed) in parallel. A failing source is logged with its reason and simply contributes no jobs.
+- Results are normalised to one shape (`id`, `title`, `company`, `location`, `country`, `workMode`, `tags`, `stipend`, `isInternship`, `isNew`, `postedAt`, …), filtered to the last 60 days, and de-duplicated by URL and title+company.
+- The merged list is cached in memory for **30 minutes**. Concurrent requests share a single upstream fetch, and a stale cache is served instantly while it refreshes in the background.
+- Only real API data is shown — nothing is hardcoded into the feed. `isInternship` is detected from keywords (intern, co-op, trainee, graduate program…), and the UI reports internships and total openings separately.
 
-### 2. How Job Fetching & Caching Works
-*   The backend service `jobService.js` queries public job endpoints in parallel using `Promise.allSettled`.
-*   To prevent hitting rate limits (e.g. Remotive blocks IPs that request data more than twice a minute), the backend caches the normalized job results in-memory for **10 minutes**.
-*   Subsequent client requests are instantly returned from the local cache. If the cache expires, the server hits the APIs again, merges the responses, updates the cache, and serves the new listings.
+### Job alerts
+- Subscribers pick companies, roles, locations and a frequency (hourly, every 6 hours, daily) on the Alerts page.
+- An hourly cron (`alertService.js`) records newly seen jobs in `JobSnapshot`, then emails each subscriber who is due the jobs first seen since their last alert that match their preferences (up to 5 per email).
+- Role and location keywords are matched as whole words (so "AI" doesn't match "trainee" and "Java" doesn't match "JavaScript").
+- Every email has a one-click unsubscribe link and `List-Unsubscribe` headers. Typing an address into the Unsubscribe form emails that inbox a confirmation link rather than unsubscribing immediately.
 
-### 3. How APIs are Integrated & Normalized
-*   **Remotive API:** Pulls listings from `https://remotive.com/api/remote-jobs`.
-*   **Arbeitnow API:** Pulls listings from `https://www.arbeitnow.com/api/job-board-api`.
-*   The schemas returned by these endpoints differ. Our `jobService.js` normalizes them into a unified format:
-    *   `id`: Prepended with their source (e.g., `remotive-1234`, `arbeitnow-slug`) to ensure key uniqueness.
-    *   `title`, `company`, `location`, `url`: Mapped uniformly.
-    *   `tags`: Cleaned and truncated to a maximum of 5 tags to prevent visual clutter.
-    *   `isInternship`: Automatically computed by checking if the title or tags contain keywords like *intern*, *co-op*, *placement*, *student*, or *trainee*.
-    *   `postedAt`: Normalized into ISO string timestamps.
+### API
 
-### 4. How Email Notifications Work
-*   When the backend receives a validation post on `/api/subscribe`, it inspects the string against email regex validation.
-*   `emailService.js` loads the SMTP transporter setup in `mail.js`.
-*   A responsive HTML subscription confirmation template is rendered, complete with the branding color palette and active links.
-*   **Nodemailer** sends the email. If the environment is in development and has no credentials, it provides a clickable URL logging the test mailbox where the developer can inspect the visual markup.
+| Method & path | Description |
+|---|---|
+| `GET /` | Health check, database state and per-source status |
+| `GET /api/jobs` | Cached job list + cache metadata |
+| `GET /api/jobs/status` | Cache metadata only |
+| `POST /api/jobs/refresh` | 🔐 Force a fresh fetch (admin) |
+| `POST /api/subscribe` | Subscribe / update preferences (rate limited) |
+| `GET /api/subscribe/unsubscribe?token=` | One-click unsubscribe link |
+| `POST /api/subscribe/unsubscribe` | `?token=` one-click (RFC 8058) or `{ email }` → emails a confirmation link (rate limited) |
+| `GET /api/subscribe/status?email=` | 🔐 Subscriber lookup (admin) |
 
 ---
 
-## 🚀 Deployment Instructions
+## 🚀 Deployment
 
-### Deploying the Backend on Render
-1.  Sign in to [Render](https://render.com/).
-2.  Click **New +** and select **Web Service**.
-3.  Connect your GitHub repository containing the project.
-4.  Set the following configurations:
-    *   **Name:** `internpulse-backend`
-    *   **Root Directory:** `backend`
-    *   **Runtime:** `Node`
-    *   **Build Command:** `npm install`
-    *   **Start Command:** `npm start`
-5.  Add the following **Environment Variables** in the service settings:
-    *   `NODE_ENV` = `production`
-    *   `PORT` = `10000` (or leave blank; Render binds automatically)
-    *   `FRONTEND_URL` = `https://your-frontend-vercel-url.vercel.app`
-    *   *(Optional SMTP settings)* `EMAIL_SERVICE`, `EMAIL_USER`, `EMAIL_PASS`.
-6.  Click **Deploy Web Service**.
+### Backend on Render
+1. **New → Web Service**, connect the repo, **Root Directory** `backend`, **Build** `npm install`, **Start** `npm start`.
+2. Environment variables: `NODE_ENV=production`, `FRONTEND_URL=<your Vercel URL>`, plus `MONGODB_URI`, SMTP settings, API keys and `ADMIN_TOKEN` as needed. (`BACKEND_URL` is optional on Render.)
 
-### Deploying the Frontend on Vercel
-1.  Sign in to [Vercel](https://vercel.com/).
-2.  Click **Add New...** and select **Project**.
-3.  Import your GitHub repository.
-4.  Configure the Vercel project:
-    *   **Framework Preset:** `Vite` (Vercel auto-detects this)
-    *   **Root Directory:** `frontend`
-    *   **Build Command:** `npm run build`
-    *   **Output Directory:** `dist`
-5.  Under **Environment Variables**, add:
-    *   `VITE_API_URL` = `https://your-backend-render-url.onrender.com` (use your deployed Render service URL).
-6.  Click **Deploy**. Vercel will build the frontend assets and host them on a fast, global CDN.
+> On Render's free tier the service sleeps when idle, so the hourly alert cron only runs while it's awake.
+
+### Frontend on Vercel
+1. **Add New → Project**, import the repo, **Root Directory** `frontend` (Vite is auto-detected; output `dist`).
+2. Set `VITE_API_URL=<your Render URL>` and deploy.

@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import Navbar        from './components/Navbar';
 import SearchFilter  from './components/SearchFilter';
 import JobCard       from './components/JobCard';
-import SubscribeForm from './components/SubscribeForm';
 import CompaniesPage  from './pages/CompaniesPage';
 import ResourcesPage  from './pages/ResourcesPage';
 import BlogPage       from './pages/BlogPage';
@@ -60,16 +59,16 @@ const ECE_COMPANIES_SET = new Set([
 ]);
 
 /* ─── StatsSection ──────────────────────────────────── */
-function StatsSection({ jobsCount, companiesCount, countriesCount }) {
+function StatsSection({ internshipCount, jobsCount, companiesCount, countriesCount }) {
   return (
     <div className="bg-white border-b border-[#E2E8F0]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { value: jobsCount    || '—',  label: 'Live Internships',   emoji: '💼', color:'#2563EB' },
-            { value: companiesCount || '—', label: 'Companies Hiring',  emoji: '🏢', color:'#22C55E' },
-            { value: countriesCount || '—', label: 'Countries',         emoji: '🌍', color:'#EA580C' },
-            { value: '5',                   label: 'API Sources',        emoji: '⚡', color:'#7C3AED' },
+            { value: internshipCount || '—', label: 'Live Internships',  emoji: '🎓', color:'#2563EB' },
+            { value: jobsCount       || '—', label: 'Total Openings',    emoji: '💼', color:'#7C3AED' },
+            { value: companiesCount  || '—', label: 'Companies Hiring',  emoji: '🏢', color:'#22C55E' },
+            { value: countriesCount  || '—', label: 'Countries',         emoji: '🌍', color:'#EA580C' },
           ].map(s => (
             <div key={s.label} className="flex items-center gap-3 p-4 rounded-xl border border-[#E2E8F0] bg-[#FAFBFD]">
               <div className="text-2xl shrink-0">{s.emoji}</div>
@@ -153,9 +152,9 @@ function SkeletonCard() {
 }
 
 /* ─── Company avatar (right sidebar) ─────────────── */
-function CompanyPill({ name, color }) {
+function CompanyPill({ name, color, onClick }) {
   return (
-    <div className="flex items-center gap-2.5 py-2 px-3 rounded-xl hover:bg-[#F8FAFC] transition-colors cursor-pointer group">
+    <div onClick={onClick} className="flex items-center gap-2.5 py-2 px-3 rounded-xl hover:bg-[#F8FAFC] transition-colors cursor-pointer group">
       <div
         className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shrink-0"
         style={{ background: color }}
@@ -236,11 +235,12 @@ const SORT_OPTIONS = [
   { value:'updated', label:'🔄 Recently updated' },
   { value:'remote',  label:'🌐 Remote first'     },
 ];
-function SortBar({ count, sort, setSort }) {
+function SortBar({ count, sort, setSort, internshipsOnly }) {
+  const noun = internshipsOnly ? 'internship' : 'opening';
   return (
     <div className="flex items-center justify-between mb-4 bg-white border border-[#E2E8F0] rounded-xl px-4 py-2.5" style={{ boxShadow:'0 1px 2px rgba(0,0,0,0.04)' }}>
       <p className="text-sm text-[#64748B]">
-        <span className="font-bold text-[#0F172A]">{count}</span> {count === 1 ? 'internship' : 'internships'} found
+        <span className="font-bold text-[#0F172A]">{count}</span> {count === 1 ? noun : `${noun}s`} found
       </p>
       <div className="flex items-center gap-2">
         <span className="text-xs text-[#94A3B8] hidden sm:block">Sort:</span>
@@ -262,9 +262,25 @@ function SortBar({ count, sort, setSort }) {
 }
 
 /* ─── App ─────────────────────────────────────────── */
+/* ─── Data helpers ────────────────────────────────── */
+const parseStipendVal = (s) => {
+  if (!s) return -1;
+  const m = s.match(/(\d[\d,]*)/);  // extract first number
+  return m ? parseInt(m[1].replace(/,/g, ''), 10) : -1;
+};
+
+const errorMessage = (err) =>
+  err?.response?.data?.message || 'Could not connect to the server. Make sure the backend is running.';
+
+// Pure request — no React state involved
+const requestJobs = async () => {
+  const res = await axios.get(`${BACKEND_URL}/api/jobs`);
+  if (!res.data?.success) throw new Error('Unsuccessful response');
+  return res.data;
+};
+
 export default function App() {
   const [jobs,         setJobs]         = useState([]);
-  const [filteredJobs, setFilteredJobs] = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(null);
   const [sort,         setSort]         = useState('newest');
@@ -279,7 +295,6 @@ export default function App() {
   const [selectedCountry,  setSelectedCountry]  = useState('');  // country
   const [selectedWorkMode, setSelectedWorkMode] = useState('');  // Remote/Hybrid/On-site
   const [jobType,          setJobType]          = useState('all'); // all|internship
-  const [countriesList,    setCountriesList]    = useState([]);
 
   const [currentPage, setCurrentPage] = useState('home');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
@@ -296,44 +311,53 @@ export default function App() {
     };
   }, [currentPage]);
 
-  const subscribeRef = useRef(null);
-  const jobsRef      = useRef(null);
-
   /* fetch */
-  const fetchJobs = async (silent = false) => {
-    if (!silent) setLoading(true);
+  const applyJobs = useCallback((data) => {
+    setJobs(data.jobs || []);
+    setCacheStatus(data.cacheStatus ?? null);
+    setLastRefresh(new Date().toISOString());
+  }, []);
+
+  // Manual refresh / retry: shows the loading state and surfaces errors
+  const fetchJobs = async () => {
+    setLoading(true);
     setError(null);
     try {
-      const res = await axios.get(`${BACKEND_URL}/api/jobs`);
-      if (res.data?.success) {
-        const list = res.data.jobs || [];
-        setJobs(list);
-        setFilteredJobs(list);
-        setCacheStatus(res.data.cacheStatus ?? null);
-        setLastRefresh(new Date().toISOString());
-
-        // Build countries list from live jobs, ensuring India and Remote are always options
-        const countries = [...new Set(['India', 'Remote', ...list.map(j => j.country).filter(Boolean)])].sort();
-        setCountriesList(countries);
-      } else throw new Error('Unsuccessful response');
+      applyJobs(await requestJobs());
     } catch (err) {
-      if (!silent) setError(err.response?.data?.message || 'Could not connect to the server. Make sure the backend is running.');
+      setError(errorMessage(err));
     } finally {
-      if (!silent) setLoading(false);
+      setLoading(false);
     }
   };
 
-  // Initial fetch
-  useEffect(() => { fetchJobs(); }, []);
-
-  // Auto-refresh every 30 minutes
+  // Initial fetch (state is only set once the request settles)
   useEffect(() => {
-    const id = setInterval(() => { fetchJobs(true); }, 30 * 60 * 1000);
+    let ignore = false;
+    requestJobs()
+      .then(data => { if (!ignore) applyJobs(data); })
+      .catch(err => { if (!ignore) setError(errorMessage(err)); })
+      .finally(() => { if (!ignore) setLoading(false); });
+    return () => { ignore = true; };
+  }, [applyJobs]);
+
+  // Silent auto-refresh every 30 minutes (keeps showing current data if it fails)
+  useEffect(() => {
+    const id = setInterval(() => { requestJobs().then(applyJobs).catch(() => {}); }, 30 * 60 * 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [applyJobs]);
+
+  // Countries present in live jobs, always offering India and Remote
+  const countriesList = useMemo(
+    () => [...new Set(['India', 'Remote', ...jobs.map(j => j.country).filter(Boolean)])].sort(),
+    [jobs]
+  );
+
+  const internshipCount = useMemo(() => jobs.filter(j => j.isInternship).length, [jobs]);
+  const companiesCount  = useMemo(() => new Set(jobs.map(j => j.company)).size, [jobs]);
 
   /* ── Multi-dimension filter + sort ─────────────── */
-  useEffect(() => {
+  const filteredJobs = useMemo(() => {
     let result = [...jobs];
 
     // 1. Role / title search
@@ -372,12 +396,6 @@ export default function App() {
     if (jobType === 'internship') result = result.filter(j => j.isInternship);
 
     // ── Sort ───────────────────────────────────────
-    const parseStipendVal = (s) => {
-      if (!s) return -1;
-      const m = s.match(/(\d[\d,]*)/);  // extract first number
-      return m ? parseInt(m[1].replace(/,/g, ''), 10) : -1;
-    };
-
     result.sort((a, b) => {
       if (sort === 'newest')  return new Date(b.postedAt)  - new Date(a.postedAt);
       if (sort === 'oldest')  return new Date(a.postedAt)  - new Date(b.postedAt);
@@ -393,7 +411,7 @@ export default function App() {
       return new Date(b.postedAt) - new Date(a.postedAt);
     });
 
-    setFilteredJobs(result);
+    return result;
   }, [searchTerm, companySearch, skillsSearch, selectedSource, selectedCountry, selectedWorkMode, jobType, jobs, sort]);
 
   const activeFilterCount = [
@@ -405,8 +423,6 @@ export default function App() {
     setSelectedSource(''); setSelectedCountry(''); setSelectedWorkMode('');
     setJobType('all');
   };
-
-  const scrollToJobs = () => jobsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   /* ─── Render ─────────────────────────────────────── */
   return (
@@ -431,9 +447,10 @@ export default function App() {
       {currentPage === 'home' && (
       <>
       <StatsSection
+        internshipCount={internshipCount}
         jobsCount={jobs.length}
-        companiesCount={[...new Set(jobs.map(j => j.company))].length || undefined}
-        countriesCount={countriesList.length || undefined}
+        companiesCount={companiesCount}
+        countriesCount={jobs.length ? countriesList.length : 0}
       />
       <TopPayingCompanies onNavigate={setCurrentPage} />
       
@@ -446,7 +463,7 @@ export default function App() {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded-full mb-6">
                 <span className="w-2 h-2 rounded-full bg-[#22C55E] badge-new inline-block"/>
-                <span className="text-xs font-semibold text-[#2563EB]">{jobs.length} live internships — Worldwide & India</span>
+                <span className="text-xs font-semibold text-[#2563EB]">{internshipCount} live internships · {jobs.length} openings — Worldwide & India</span>
               </div>
 
               <h1 className="text-4xl md:text-5xl font-extrabold text-[#0F172A] leading-tight tracking-tight mb-5">
@@ -476,8 +493,8 @@ export default function App() {
               {/* Stats row */}
               <div className="flex flex-wrap gap-6 mt-10 pt-8 border-t border-[#E2E8F0]">
                 {[
-                  { value: jobs.length || '30+', label: 'Live Internships' },
-                  { value: [...new Set(jobs.map(j=>j.company))].length || '30+', label: 'Companies' },
+                  { value: internshipCount || '—', label: 'Live Internships' },
+                  { value: companiesCount  || '—', label: 'Companies' },
                   { value: '5',   label: 'API Sources' },
                   { value: '100%', label: 'Free Forever' },
                 ].map((s) => (
@@ -606,7 +623,7 @@ export default function App() {
                         </span>
                       )}
                       <button
-                        onClick={() => fetchJobs(false)}
+                        onClick={() => fetchJobs()}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] rounded-lg transition-colors"
                       >
                         Refresh
@@ -650,7 +667,7 @@ export default function App() {
 
               {/* Sort controls and job count */}
               {!loading && !error && filteredJobs.length > 0 && (
-                <SortBar count={filteredJobs.length} sort={sort} setSort={setSort} />
+                <SortBar count={filteredJobs.length} sort={sort} setSort={setSort} internshipsOnly={jobType === 'internship'} />
               )}
 
               {/* Skeletons loader */}
@@ -665,7 +682,7 @@ export default function App() {
                 <div className="bg-white rounded-2xl border border-red-100 p-8 text-center shadow-sm">
                   <h3 className="font-bold text-[#0F172A] mb-1 text-sm">Connection Error</h3>
                   <p className="text-xs text-[#64748B] mb-4">{error}</p>
-                  <button onClick={fetchJobs} className="px-4 py-2 bg-[#2563EB] text-white text-xs font-semibold rounded-xl hover:bg-[#1D4ED8] transition-colors">
+                  <button onClick={() => fetchJobs()} className="px-4 py-2 bg-[#2563EB] text-white text-xs font-semibold rounded-xl hover:bg-[#1D4ED8] transition-colors">
                     Retry
                   </button>
                 </div>
@@ -717,7 +734,11 @@ export default function App() {
                 <div className="space-y-2 text-xs text-[#475569]">
                   <div className="flex justify-between">
                     <span>Active Internships:</span>
-                    <span className="font-bold text-[#2563EB]">{jobs.length}</span>
+                    <span className="font-bold text-[#2563EB]">{internshipCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>All Openings:</span>
+                    <span className="font-bold text-[#0F172A]">{jobs.length}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>IT Opportunities:</span>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 
 const getBackendUrl = () => {
@@ -25,7 +25,7 @@ const PREF_LABELS = [
 const LOCATIONS = ['India', 'Remote', 'United States', 'Europe', 'Other Countries'];
 
 const FREQUENCIES = [
-  { value: 'instant', label: '⚡ Instant' },
+  { value: 'instant', label: '⚡ Hourly' },
   { value: '6hours', label: '⏱ Every 6 Hours' },
   { value: 'daily', label: '📅 Daily Digest' },
 ];
@@ -94,7 +94,7 @@ export default function AlertsPage() {
         const res = await axios.post(`${BACKEND_URL}/api/subscribe/unsubscribe`, { email: payload.email });
         if (res.data.success) {
           setStatus('success');
-          setMessage(res.data.message || 'Successfully unsubscribed from all job alerts.');
+          setMessage(res.data.message || "If that address is subscribed, we've emailed it a link to confirm unsubscribing.");
         } else {
           throw new Error(res.data.message || 'Unsubscription failed.');
         }
@@ -130,7 +130,7 @@ export default function AlertsPage() {
             InternPulse Job Alerts
           </h1>
           <p className="mt-3 text-sm text-[#64748B] max-w-md mx-auto leading-relaxed">
-            Get notified instantly whenever new internships matching your interests are discovered.
+            Get an email when new internships matching your interests are discovered. We check every hour.
           </p>
         </div>
 

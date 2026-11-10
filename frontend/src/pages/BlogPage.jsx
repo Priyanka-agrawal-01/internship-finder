@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { BLOG_POSTS, BLOG_CATEGORIES } from '../data/blogData';
 
 /* ─── Icons ───────────────────────────────────────────────────────────────── */
@@ -189,7 +189,6 @@ export default function BlogPage() {
   const [openPost, setOpenPost] = useState(null);
 
   const featured = BLOG_POSTS.filter(p => p.featured);
-  const latest   = BLOG_POSTS.filter(p => !p.featured);
 
   const filtered = useMemo(() => {
     let list = [...BLOG_POSTS];

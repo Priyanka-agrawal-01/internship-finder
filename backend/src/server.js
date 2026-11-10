@@ -1,8 +1,9 @@
 require('dotenv').config();
 const express  = require('express');
 const cors     = require('cors');
-const { connectDB }           = require('./config/db');
-const { startAlertScheduler } = require('./services/alertService');
+const { connectDB, isDBConnected } = require('./config/db');
+const { startAlertScheduler }      = require('./services/alertService');
+const { getCacheStatus }           = require('./services/jobService');
 
 const jobRoutes       = require('./routes/jobRoutes');
 const subscribeRoutes = require('./routes/subscribeRoutes');
@@ -10,29 +11,49 @@ const subscribeRoutes = require('./routes/subscribeRoutes');
 const app  = express();
 const PORT = process.env.PORT || 5000;
 
+// Behind Render/Heroku-style proxies, trust the first hop so req.ip is the
+// real client IP (needed for per-IP rate limiting).
+if (process.env.NODE_ENV === 'production' || process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
+
 // ── CORS ─────────────────────────────────────────────────────────────────────
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
-  'http://localhost:3000',
+// FRONTEND_URL may hold several origins separated by commas, e.g.
+//   FRONTEND_URL=https://internpulse.vercel.app,https://www.internpulse.dev
+const normalizeOrigin = o => o.trim().replace(/\/+$/, '');
+const allowedOrigins = new Set([
+  ...(process.env.FRONTEND_URL || 'http://localhost:5173').split(',').map(normalizeOrigin).filter(Boolean),
+  'http://localhost:5173',
   'http://localhost:5174',
+  'http://localhost:3000',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
-];
+]);
+const warnedOrigins = new Set();
 
 app.use(cors({
   origin: (origin, cb) => {
-    // Dynamically allow any origin to prevent CORS blocks in development and production deployments
-    return cb(null, true);
+    // Requests without an Origin header (curl, server-to-server, same-origin) are fine
+    if (!origin || allowedOrigins.has(normalizeOrigin(origin))) return cb(null, true);
+    if (!warnedOrigins.has(origin)) {
+      warnedOrigins.add(origin);
+      console.warn(`[CORS] Blocked request from ${origin}. Add it to FRONTEND_URL (comma-separated) if it is your frontend.`);
+    }
+    return cb(null, false);
   },
-  credentials: true,
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '20kb' }));
+app.use(express.urlencoded({ extended: false, limit: '20kb' }));
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
-  const { isDBConnected } = require('./config/db');
+  const counts = getCacheStatus().sourceCounts;
+  const sourceState = (name, keyed) => {
+    if (keyed === false) return 'not configured';
+    if (!counts) return 'not fetched yet';
+    return counts[name] > 0 ? `active (${counts[name]} jobs)` : 'returned 0 jobs on last fetch';
+  };
   res.json({
     name:      'InternPulse API v2',
     status:    'Healthy',
@@ -40,11 +61,11 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString(),
     database:  isDBConnected() ? 'connected' : 'not connected (set MONGODB_URI)',
     sources: {
-      remotive:   'active (free)',
-      arbeitnow:  'active (free)',
-      themuse:    'active (free)',
-      adzuna:     process.env.ADZUNA_APP_ID ? 'active (keyed)' : 'not configured',
-      jsearch:    process.env.RAPIDAPI_KEY  ? 'active (keyed)' : 'not configured',
+      remotive:  sourceState('remotive'),
+      arbeitnow: sourceState('arbeitnow'),
+      themuse:   sourceState('muse'),
+      adzuna:    sourceState('adzuna',  !!(process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY)),
+      jsearch:   sourceState('jsearch', !!process.env.RAPIDAPI_KEY),
     },
   });
 });
@@ -55,6 +76,11 @@ app.use('/api/subscribe', subscribeRoutes);
 
 // ── Global error handler ─────────────────────────────────────────────────────
 app.use((err, req, res, _next) => {
+  // Client errors such as malformed JSON or an oversized body keep their 4xx status
+  const status = err.status || err.statusCode;
+  if (status >= 400 && status < 500) {
+    return res.status(status).json({ success: false, message: 'Invalid request.' });
+  }
   console.error('[Server] Unhandled error:', err.message);
   res.status(500).json({
     success: false,
@@ -63,12 +89,20 @@ app.use((err, req, res, _next) => {
   });
 });
 
+// Log stray promise rejections instead of letting one bad request crash the server
+process.on('unhandledRejection', err => {
+  console.error('[Server] Unhandled promise rejection:', err?.message || err);
+});
+
 // ── Boot sequence ─────────────────────────────────────────────────────────────
 async function boot() {
   // 1. Connect to MongoDB (gracefully degrades if unavailable)
   await connectDB();
 
-  // 2. Start HTTP server
+  // 2. Start the alert cron scheduler
+  const alertCron = startAlertScheduler();
+
+  // 3. Start HTTP server
   app.listen(PORT, () => {
     const sep = '═'.repeat(62);
     console.log(`\n${sep}`);
@@ -76,7 +110,6 @@ async function boot() {
     console.log(`  💼 Jobs               →  http://localhost:${PORT}/api/jobs`);
     console.log(`  📊 Cache status       →  http://localhost:${PORT}/api/jobs/status`);
     console.log(`  🔔 Subscribe          →  http://localhost:${PORT}/api/subscribe`);
-    console.log(`  🚪 Unsubscribe        →  http://localhost:${PORT}/api/subscribe/unsubscribe?token=...`);
     console.log(`${sep}`);
     console.log(`  ✅ Remotive      (free, no key needed)`);
     console.log(`  ✅ Arbeitnow     (free, no key needed)`);
@@ -85,14 +118,11 @@ async function boot() {
     console.log(`  ${process.env.RAPIDAPI_KEY  ? '✅' : '⚪'} JSearch       ${process.env.RAPIDAPI_KEY  ? '(keyed – active)' : '(add RAPIDAPI_KEY)'}`);
     console.log(`${sep}`);
     console.log(`  🔄 Job cache auto-refreshes every 30 minutes`);
-    console.log(`  🔔 Alert cron runs every 6 hours`);
+    console.log(`  🔔 Alert cron: "${alertCron}" (each subscriber's frequency is respected)`);
     console.log(`  🗑️  Jobs older than 60 days removed automatically`);
-    console.log(`  🌍  Worldwide listings — India, Remote & global roles`);
+    console.log(`  🔐 Admin endpoints ${process.env.ADMIN_TOKEN ? 'enabled (x-admin-token)' : 'disabled (set ADMIN_TOKEN to enable)'}`);
     console.log(`${sep}\n`);
   });
-
-  // 3. Start the 6-hour alert cron scheduler
-  startAlertScheduler();
 }
 
 boot().catch(err => {

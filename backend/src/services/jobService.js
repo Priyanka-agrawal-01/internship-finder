@@ -1,21 +1,24 @@
 'use strict';
-const axios = require('axios');
+const axios  = require('axios');
+const crypto = require('crypto');
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
-const CACHE_DURATION_MS  = 30 * 60 * 1000;   // 30 min
-const JOB_MAX_AGE_DAYS   = 60;
-const RECENT_BADGE_HOURS = 24;
-const FETCH_TIMEOUT_MS   = 12000;
+const CACHE_DURATION_MS = 30 * 60 * 1000;   // 30 min
+const EMPTY_RETRY_MS    = 2 * 60 * 1000;    // retry sooner when every source came back empty
+const JOB_MAX_AGE_DAYS  = 60;
+const NEW_BADGE_HOURS   = 24;
+const FETCH_TIMEOUT_MS  = 12000;
 const UA = 'InternPulse-Aggregator/2.0 (https://internpulse.dev)';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  IN-MEMORY CACHE
 // ─────────────────────────────────────────────────────────────────────────────
-let jobsCache     = null;
-let lastFetchTime = null;
-let isFetching    = false;
+let jobsCache         = null;
+let lastFetchTime     = null;
+let lastSourceCounts  = null;
+let inFlight          = null;   // the one fetch currently running, shared by all callers
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  LOCATION / WORK-MODE HELPERS  (worldwide — no country lock)
@@ -82,9 +85,9 @@ function isExpired(postedAt) {
   if (!postedAt) return false;
   return Date.now() - new Date(postedAt).getTime() > JOB_MAX_AGE_DAYS * 86400000;
 }
-function isVerifiedRecently(fetchedAt) {
-  if (!fetchedAt) return false;
-  return Date.now() - new Date(fetchedAt).getTime() < RECENT_BADGE_HOURS * 3600000;
+function isPostedRecently(postedAt) {
+  if (!postedAt) return false;
+  return Date.now() - new Date(postedAt).getTime() < NEW_BADGE_HOURS * 3600000;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -107,28 +110,9 @@ function deduplicateJobs(jobs) {
   return out;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  COMPANY LOGO  — Clearbit Logo API (free, no key)
-// ─────────────────────────────────────────────────────────────────────────────
-const DOMAIN_MAP = {
-  'Google': 'google.com', 'Microsoft': 'microsoft.com', 'Amazon': 'amazon.com',
-  'Adobe': 'adobe.com', 'Flipkart': 'flipkart.com', 'Razorpay': 'razorpay.com',
-  'Swiggy': 'swiggy.com', 'Zomato': 'zomato.com', 'PhonePe': 'phonepe.com',
-  'Groww': 'groww.in', 'CRED': 'cred.club', 'Meesho': 'meesho.com',
-  'Uber': 'uber.com', 'Atlassian': 'atlassian.com', 'ServiceNow': 'servicenow.com',
-  'Cisco': 'cisco.com', 'Salesforce': 'salesforce.com', 'Intuit': 'intuit.com',
-  'Qualcomm': 'qualcomm.com', 'Intel': 'intel.com', 'AMD': 'amd.com',
-  'NVIDIA': 'nvidia.com', 'LinkedIn': 'linkedin.com', 'Stripe': 'stripe.com',
-  'Shopify': 'shopify.com', 'Airbnb': 'airbnb.com', 'Netflix': 'netflix.com',
-  'Meta': 'meta.com', 'Apple': 'apple.com', 'Twitter': 'x.com',
-  'Freshworks': 'freshworks.com', 'Zoho': 'zoho.com', 'PayU': 'payu.in',
-  'Eternal': 'eternal.com', 'Postman': 'postman.com', 'BrowserStack': 'browserstack.com',
-};
-
-function getLogoUrl(company = '') {
-  const domain = DOMAIN_MAP[company]
-    || company.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '') + '.com';
-  return `https://logo.clearbit.com/${domain}`;
+// Stable short id for sources that don't always give us one
+function stableId(...parts) {
+  return crypto.createHash('sha1').update(parts.join('|')).digest('hex').slice(0, 16);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -138,11 +122,11 @@ function base(extra) {
   return {
     stipend:  null,
     duration: null,
-    logoUrl:  null,
+    logoUrl:  null,   // only set when the source API provides a real logo
     skills:   [],
     workMode: 'On-site',
     ...extra,
-    verifiedRecently: isVerifiedRecently(extra.fetchedAt),
+    isNew: isPostedRecently(extra.postedAt),
   };
 }
 
@@ -165,7 +149,6 @@ function normalizeRemotiveJob(job, fetchedAt) {
     workMode: 'Remote',
     isInternship: checkIsInternship(title, tags),
     country:  detectCountry(location),
-    logoUrl:  getLogoUrl(company),
     description: job.description?.replace(/<[^>]*>/g, '').slice(0, 200) || '',
   });
 }
@@ -177,7 +160,7 @@ function normalizeArbeitnowJob(job, fetchedAt) {
   const location = job.location || 'Remote';
   const isRemote = job.remote === true || location.toLowerCase().includes('remote');
   return base({
-    id:       `arbeitnow-${job.slug || Math.random().toString(36).slice(2)}`,
+    id:       `arbeitnow-${job.slug || stableId(job.url, title, company)}`,
     title, company, location,
     url:      job.url || '',
     source:   'Arbeitnow',
@@ -187,7 +170,6 @@ function normalizeArbeitnowJob(job, fetchedAt) {
     workMode: detectWorkMode(location, isRemote),
     isInternship: checkIsInternship(title, tags),
     country:  detectCountry(location),
-    logoUrl:  getLogoUrl(company),
     description: (job.description || '').replace(/<[^>]*>/g, '').slice(0, 200),
   });
 }
@@ -210,7 +192,6 @@ function normalizeAdzunaJob(job, fetchedAt) {
     workMode: detectWorkMode(location),
     isInternship: checkIsInternship(title, tags),
     country:  detectCountry(location),
-    logoUrl:  getLogoUrl(company),
     description: (job.description || '').replace(/<[^>]*>/g, '').slice(0, 200),
   });
 }
@@ -233,7 +214,7 @@ function normalizeJSearchJob(job, fetchedAt) {
     workMode: detectWorkMode(location, job.job_is_remote),
     isInternship: checkIsInternship(title, skills, job.job_employment_type),
     country:  detectCountry(location),
-    logoUrl:  job.employer_logo || getLogoUrl(company),
+    logoUrl:  job.employer_logo || null,
     description: (job.job_description || '').slice(0, 200),
   });
 }
@@ -257,9 +238,24 @@ function normalizeMuseJob(job, fetchedAt) {
     isInternship: checkIsInternship(title, tags) ||
       (job.level || []).some(l => l.name?.toLowerCase().includes('intern')),
     country:  detectCountry(location),
-    logoUrl:  getLogoUrl(company),
     description: '',
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  REQUEST HELPER — runs requests in parallel and logs every failure with its
+//  reason, so a source that silently returns 0 jobs is visible in the logs.
+// ─────────────────────────────────────────────────────────────────────────────
+async function settleRequests(label, requests) {
+  const results = await Promise.allSettled(requests);
+  const failures = results.filter(r => r.status === 'rejected');
+  if (failures.length) {
+    const reasons = [...new Set(failures.map(f =>
+      f.reason?.response ? `HTTP ${f.reason.response.status}` : (f.reason?.code || f.reason?.message || 'unknown error')
+    ))];
+    console.warn(`[${label}] ${failures.length}/${results.length} requests failed (${reasons.join(', ')})`);
+  }
+  return results.filter(r => r.status === 'fulfilled').map(r => r.value);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -268,14 +264,12 @@ function normalizeMuseJob(job, fetchedAt) {
 async function fetchRemotive(fetchedAt) {
   try {
     const queries = ['intern', 'internship', 'student', 'entry level', 'graduate'];
-    const results = await Promise.allSettled(queries.map(q =>
+    const responses = await settleRequests('Remotive', queries.map(q =>
       axios.get(`https://remotive.com/api/remote-jobs?search=${encodeURIComponent(q)}&limit=50`, {
         timeout: FETCH_TIMEOUT_MS, headers: { 'User-Agent': UA },
       })
     ));
-    const raw = results
-      .filter(r => r.status === 'fulfilled')
-      .flatMap(r => r.value.data?.jobs || []);
+    const raw = responses.flatMap(r => r.data?.jobs || []);
     console.log(`[Remotive] Fetched ${raw.length} raw jobs`);
     return raw.map(j => normalizeRemotiveJob(j, fetchedAt));
   } catch (err) {
@@ -286,14 +280,12 @@ async function fetchRemotive(fetchedAt) {
 
 async function fetchArbeitnow(fetchedAt) {
   try {
-    const pages = await Promise.allSettled([1, 2, 3].map(p =>
+    const responses = await settleRequests('Arbeitnow', [1, 2, 3].map(p =>
       axios.get(`https://www.arbeitnow.com/api/job-board-api?page=${p}`, {
         timeout: FETCH_TIMEOUT_MS, headers: { 'User-Agent': UA },
       })
     ));
-    const raw = pages
-      .filter(r => r.status === 'fulfilled')
-      .flatMap(r => r.value.data?.data || []);
+    const raw = responses.flatMap(r => r.data?.data || []);
     console.log(`[Arbeitnow] Fetched ${raw.length} raw jobs`);
     return raw.map(j => normalizeArbeitnowJob(j, fetchedAt));
   } catch (err) {
@@ -326,7 +318,7 @@ async function fetchAdzuna(fetchedAt) {
   ];
 
   try {
-    const results = await Promise.allSettled(searches.map(s =>
+    const responses = await settleRequests('Adzuna', searches.map(s =>
       axios.get(`https://api.adzuna.com/v1/api/jobs/${s.country}/search/1`, {
         timeout: FETCH_TIMEOUT_MS,
         params: {
@@ -337,7 +329,7 @@ async function fetchAdzuna(fetchedAt) {
         },
       })
     ));
-    const raw = results.filter(r => r.status === 'fulfilled').flatMap(r => r.value.data?.results || []);
+    const raw = responses.flatMap(r => r.data?.results || []);
     console.log(`[Adzuna] Fetched ${raw.length} raw jobs`);
     return raw.map(j => normalizeAdzunaJob(j, fetchedAt));
   } catch (err) {
@@ -365,14 +357,14 @@ async function fetchJSearch(fetchedAt) {
   ];
 
   try {
-    const results = await Promise.allSettled(queries.map(q =>
+    const responses = await settleRequests('JSearch', queries.map(q =>
       axios.get('https://jsearch.p.rapidapi.com/search', {
         timeout: FETCH_TIMEOUT_MS,
         headers: { 'X-RapidAPI-Key': key, 'X-RapidAPI-Host': 'jsearch.p.rapidapi.com' },
         params: { query: q, page: '1', num_pages: '1', employment_types: 'INTERN' },
       })
     ));
-    const raw = results.filter(r => r.status === 'fulfilled').flatMap(r => r.value.data?.data || []);
+    const raw = responses.flatMap(r => r.data?.data || []);
     console.log(`[JSearch] Fetched ${raw.length} raw jobs`);
     return raw.map(j => normalizeJSearchJob(j, fetchedAt));
   } catch (err) {
@@ -388,14 +380,14 @@ async function fetchMuse(fetchedAt) {
     const key = process.env.MUSE_API_KEY;
     if (key) params.api_key = key;
 
-    const results = await Promise.allSettled(categories.map(cat =>
+    const responses = await settleRequests('The Muse', categories.map(cat =>
       axios.get('https://www.themuse.com/api/public/jobs', {
         timeout: FETCH_TIMEOUT_MS,
         params: { ...params, category: cat },
         headers: { 'User-Agent': UA },
       })
     ));
-    const raw = results.filter(r => r.status === 'fulfilled').flatMap(r => r.value.data?.results || []);
+    const raw = responses.flatMap(r => r.data?.results || []);
     console.log(`[The Muse] Fetched ${raw.length} raw jobs`);
     return raw.map(j => normalizeMuseJob(j, fetchedAt));
   } catch (err) {
@@ -405,47 +397,7 @@ async function fetchMuse(fetchedAt) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  EMERGENCY FALLBACK  — only used when ALL live APIs return 0 jobs.
-//  These are NOT injected into live data. They are career page links,
-//  not fake listings. They clearly show source: 'InternPulse (cached)'.
-// ─────────────────────────────────────────────────────────────────────────────
-function buildEmergencyFallback() {
-  const now = Date.now();
-  const ago = h => new Date(now - h * 3600000).toISOString();
-
-  return [
-    { id:'ef-google',      title:'Software Engineering Intern',          company:'Google',          location:'Bangalore, India',   url:'https://careers.google.com/jobs/results/?employment_type=INTERN',        tags:['C++','Java','Python'],          stipend:'₹1.5L–2L/mo',   workMode:'On-site', country:'India'  },
-    { id:'ef-microsoft',   title:'Software Engineering Intern',          company:'Microsoft',       location:'Hyderabad, India',   url:'https://jobs.careers.microsoft.com/?ph=2&et=Internship',                 tags:['C#','Azure','SQL'],             stipend:'₹1.2L–1.8L/mo', workMode:'On-site', country:'India'  },
-    { id:'ef-amazon',      title:'SDE Intern',                           company:'Amazon',          location:'Bangalore, India',   url:'https://www.amazon.jobs/content/en/team/internship-university-recruiting',tags:['Java','AWS','DSA'],            stipend:'₹1.2L–1.5L/mo', workMode:'On-site', country:'India'  },
-    { id:'ef-adobe',       title:'Product Engineering Intern',           company:'Adobe',           location:'Noida, India',       url:'https://careers.adobe.com/us/en/search-results?keywords=intern',         tags:['React','TypeScript'],           stipend:'₹75K–1L/mo',    workMode:'On-site', country:'India'  },
-    { id:'ef-stripe',      title:'Software Engineering Intern',          company:'Stripe',          location:'Remote',             url:'https://stripe.com/jobs/search?remote_locations=Remote',                 tags:['Python','Ruby','APIs'],         stipend:'$8K–10K/mo',    workMode:'Remote',  country:'Remote' },
-    { id:'ef-shopify',     title:'Frontend Developer Intern',            company:'Shopify',         location:'Remote / Worldwide', url:'https://www.shopify.com/careers/search',                                 tags:['React','GraphQL','CSS'],        stipend:'$5K–7K/mo',     workMode:'Remote',  country:'Remote' },
-    { id:'ef-flipkart',    title:'SDE Intern',                           company:'Flipkart',        location:'Bangalore, India',   url:'https://www.flipkartcareers.com/#!/joblist',                             tags:['Java','DSA','SQL'],             stipend:'₹60K–90K/mo',   workMode:'On-site', country:'India'  },
-    { id:'ef-razorpay',    title:'Backend Engineering Intern',           company:'Razorpay',        location:'Bangalore, India',   url:'https://razorpay.com/jobs/',                                             tags:['Golang','Node.js','MySQL'],     stipend:'₹60K–90K/mo',   workMode:'Hybrid',  country:'India'  },
-    { id:'ef-freshworks',  title:'Software Engineering Intern',          company:'Freshworks',      location:'Chennai, India',     url:'https://careers.freshworks.com/',                                       tags:['Ruby','React','Product'],       stipend:'₹50K–80K/mo',   workMode:'On-site', country:'India'  },
-    { id:'ef-zoho',        title:'Software Developer Intern',            company:'Zoho',            location:'Chennai, India',     url:'https://careers.zoho.com/',                                              tags:['Java','C++','Full Stack'],      stipend:'₹20K–50K/mo',   workMode:'On-site', country:'India'  },
-    { id:'ef-qualcomm',    title:'VLSI Design Intern',                   company:'Qualcomm',        location:'Hyderabad, India',   url:'https://careers.qualcomm.com/careers/search?type=Internship',           tags:['VLSI','SystemVerilog','RTL'],   stipend:'₹90K–1.2L/mo',  workMode:'On-site', country:'India'  },
-    { id:'ef-intel',       title:'Hardware Engineering Intern',          company:'Intel',           location:'Bangalore, India',   url:'https://jobs.intel.com/en/search-jobs?keyword=intern',                  tags:['VLSI','Verilog','SoC'],         stipend:'₹80K–1.1L/mo',  workMode:'On-site', country:'India'  },
-    { id:'ef-nvidia',      title:'Deep Learning Engineer Intern',        company:'NVIDIA',          location:'Bangalore, India',   url:'https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite',   tags:['CUDA','PyTorch','C++'],         stipend:'₹1.2L–1.8L/mo', workMode:'On-site', country:'India'  },
-    { id:'ef-swiggy',      title:'Backend Engineering Intern',           company:'Swiggy',          location:'Bangalore, India',   url:'https://careers.swiggy.com/#/careers',                                  tags:['Java','Spring Boot','Redis'],   stipend:'₹55K–80K/mo',   workMode:'On-site', country:'India'  },
-    { id:'ef-deshaw',      title:'Software Developer Intern',            company:'DE Shaw',         location:'Hyderabad, India',   url:'https://www.deshaw.com/careers/internships',                            tags:['C++','Algorithms','Systems'],   stipend:'₹1.2L–1.5L/mo', workMode:'On-site', country:'India'  },
-  ].map((j, i) => ({
-    ...j,
-    fetchedAt:        new Date().toISOString(),
-    postedAt:         ago(120 + i * 4),
-    isInternship:     true,
-    isRemote:         j.workMode === 'Remote',
-    logoUrl:          getLogoUrl(j.company),
-    duration:         '2–6 months',
-    verifiedRecently: i < 5,
-    skills:           j.tags,
-    description:      '',
-    source:           'InternPulse',
-  }));
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  MAIN AGGREGATOR  — pure API data, no hardcoded injection
+//  MAIN AGGREGATOR  — only real API data, nothing hardcoded
 // ─────────────────────────────────────────────────────────────────────────────
 async function fetchAllJobs() {
   const fetchedAt = new Date().toISOString();
@@ -460,18 +412,16 @@ async function fetchAllJobs() {
     fetchMuse(fetchedAt),
   ]);
 
-  // ── Combine live API results and always inject curated Indian internships ──
-  const liveJobs = [...remotive, ...arbeitnow, ...adzuna, ...jsearch, ...muse, ...buildEmergencyFallback()];
+  const liveJobs = [...remotive, ...arbeitnow, ...adzuna, ...jsearch, ...muse];
 
-  const counts = {
+  lastSourceCounts = {
     remotive:  remotive.length,
     arbeitnow: arbeitnow.length,
     adzuna:    adzuna.length,
     jsearch:   jsearch.length,
     muse:      muse.length,
-    liveTotal: liveJobs.length,
   };
-  console.log(`[JobService] Live source counts: ${JSON.stringify(counts)}`);
+  console.log(`[JobService] Live source counts: ${JSON.stringify({ ...lastSourceCounts, liveTotal: liveJobs.length })}`);
 
   // ── Remove expired posts ──────────────────────────────────────────────────
   const active = liveJobs.filter(j => !isExpired(j.postedAt));
@@ -485,70 +435,68 @@ async function fetchAllJobs() {
     return new Date(b.postedAt) - new Date(a.postedAt);
   });
 
-  console.log(`[JobService] Unique live jobs after dedup + expiry filter: ${unique.length}`);
-
-  // ── Emergency fallback ONLY when all APIs returned nothing ────────────────
-  if (unique.length === 0) {
-    console.warn('[JobService] All APIs returned 0 jobs — using emergency cached fallback');
-    return buildEmergencyFallback();
-  }
-
-  console.log(`[JobService] Serving ${unique.length} live jobs from APIs\n`);
+  const internships = unique.filter(j => j.isInternship).length;
+  console.log(`[JobService] ${unique.length} unique jobs after dedup + expiry filter (${internships} internships)\n`);
   return unique;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  AUTO-REFRESH  (every 30 min)
+//  CACHE REFRESH  — single-flight: concurrent callers share one fetch
 // ─────────────────────────────────────────────────────────────────────────────
-function scheduleAutoRefresh() {
-  setInterval(async () => {
-    if (isFetching) return;
-    console.log('[JobService] Auto-refreshing cache...');
-    try {
-      isFetching    = true;
-      jobsCache     = await fetchAllJobs();
-      lastFetchTime = Date.now();
-    } catch (err) {
-      console.error('[JobService] Auto-refresh failed:', err.message);
-    } finally {
-      isFetching = false;
-    }
-  }, CACHE_DURATION_MS);
+function refreshCache() {
+  if (inFlight) return inFlight;
+
+  inFlight = fetchAllJobs()
+    .then(jobs => {
+      if (jobs.length > 0) {
+        jobsCache     = jobs;
+        lastFetchTime = Date.now();
+      } else {
+        // Every source failed or returned nothing. Keep any previous data and
+        // try again after a short back-off instead of caching an empty list.
+        console.warn('[JobService] All sources returned 0 jobs — keeping previous cache, retrying soon');
+        jobsCache     = jobsCache || [];
+        lastFetchTime = Date.now() - CACHE_DURATION_MS + EMPTY_RETRY_MS;
+      }
+      return jobsCache;
+    })
+    .catch(err => {
+      console.error('[JobService] Fetch failed:', err.message);
+      return jobsCache || [];
+    })
+    .finally(() => { inFlight = null; });
+
+  return inFlight;
 }
-scheduleAutoRefresh();
+
+// Keep the cache warm in the background. unref() so this timer never keeps
+// the process (or a test run) alive on its own.
+setInterval(() => {
+  console.log('[JobService] Auto-refreshing cache...');
+  refreshCache();
+}, CACHE_DURATION_MS).unref();
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  PUBLIC API
 // ─────────────────────────────────────────────────────────────────────────────
 async function getJobs() {
-  const stale = !jobsCache || !lastFetchTime || (Date.now() - lastFetchTime >= CACHE_DURATION_MS);
-  if (!stale) {
-    const ageMin = Math.round((Date.now() - lastFetchTime) / 60000);
-    console.log(`[JobService] Cache hit (${ageMin}min old, ${jobsCache.length} jobs)`);
+  const stale = !lastFetchTime || (Date.now() - lastFetchTime >= CACHE_DURATION_MS);
+
+  if (jobsCache && !stale) return jobsCache;
+
+  // Stale but we have data: serve it now and refresh in the background
+  if (jobsCache && jobsCache.length > 0) {
+    refreshCache();
     return jobsCache;
   }
-  if (isFetching) {
-    if (jobsCache) return jobsCache;
-    await new Promise(r => setTimeout(r, 800));
-    if (jobsCache) return jobsCache;
-  }
-  try {
-    isFetching    = true;
-    jobsCache     = await fetchAllJobs();
-    lastFetchTime = Date.now();
-    return jobsCache;
-  } catch (err) {
-    console.error('[JobService] Fetch failed:', err.message);
-    if (jobsCache) return jobsCache;
-    return buildEmergencyFallback();
-  } finally {
-    isFetching = false;
-  }
+
+  // Nothing cached yet: wait for the (shared) fetch
+  return refreshCache();
 }
 
 function forceRefresh() {
-  jobsCache     = null;
   lastFetchTime = null;
+  return refreshCache();
 }
 
 function getCacheStatus() {
@@ -557,9 +505,19 @@ function getCacheStatus() {
     lastFetchTime:        lastFetchTime ? new Date(lastFetchTime).toISOString() : null,
     nextRefresh:          lastFetchTime ? new Date(lastFetchTime + CACHE_DURATION_MS).toISOString() : null,
     jobCount:             jobsCache?.length ?? 0,
+    internshipCount:      jobsCache ? jobsCache.filter(j => j.isInternship).length : 0,
+    sourceCounts:         lastSourceCounts,
     cacheDurationMinutes: CACHE_DURATION_MS / 60000,
-    liveJobsOnly:         true,  // confirms no hardcoded injection
   };
 }
 
-module.exports = { getJobs, getCacheStatus, forceRefresh };
+// Test-only: reset module state between tests
+function _resetForTests() {
+  jobsCache = null; lastFetchTime = null; lastSourceCounts = null; inFlight = null;
+}
+
+module.exports = {
+  getJobs, getCacheStatus, forceRefresh,
+  // exported for tests
+  checkIsInternship, deduplicateJobs, detectCountry, isPostedRecently, _resetForTests,
+};

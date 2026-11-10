@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { IT_COMPANIES, ECE_COMPANIES } from '../data/companiesData';
 import { getCompanyPrep } from '../data/prepData';
 
@@ -30,11 +30,6 @@ const MapPin = () => (
 const CloseIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5" strokeLinecap="round">
     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-);
-const ChevronDown = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m6 9 6 6 6-6"/>
   </svg>
 );
 
@@ -227,11 +222,12 @@ function CompanyCard({ company, onSelect, isBookmarked, isApplied, onToggleBookm
 
 // ─── Modal ───────────────────────────────────────────────────────────────────
 function CompanyModal({ company, tab, onClose, isBookmarked, isApplied, onToggleBookmark, onToggleApplied }) {
+  // Hooks must run before any early return so their order never changes between renders
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'prep'
+
   if (!company) return null;
   const sc = stipendColor(company.stipendMin);
   const prep = getCompanyPrep(company.id, tab);
-  
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'prep'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
