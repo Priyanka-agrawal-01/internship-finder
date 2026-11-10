@@ -1,16 +1,8 @@
 import { useState } from 'react';
 import { useSaved, jobData } from '../saved/savedContext';
 import { BookmarkButton, AppliedButton } from './SaveButtons';
+import { styleOf } from '../lib/sources';
 
-/* ─── Source badge colours ──────────────────────────────────────────────────── */
-const SOURCE_STYLES = {
-  'Remotive':    { bg:'#FEFCE8', text:'#A16207', border:'#FDE68A' },
-  'Arbeitnow':  { bg:'#F0FDF4', text:'#16A34A', border:'#BBF7D0' },
-  'The Muse':   { bg:'#FFF1F2', text:'#E11D48', border:'#FECDD3' },
-  'Adzuna':     { bg:'#FFF7ED', text:'#EA580C', border:'#FED7AA' },
-  'JSearch':    { bg:'#ECFDF5', text:'#059669', border:'#A7F3D0' },
-  'InternPulse':{ bg:'#E6F0EF', text:'#06525C', border:'#B5D2D0' },
-};
 
 const WORK_MODE_STYLES = {
   'Remote':  { bg:'#F0FDF4', text:'#16A34A', border:'#BBF7D0', label:'🌐 Remote'  },
@@ -68,7 +60,7 @@ export default function JobCard({ job }) {
   const bookmarked = saved.isBookmarked('job', job.id);
   const applied    = saved.isApplied('job', job.id);
 
-  const src   = SOURCE_STYLES[job.source] ?? SOURCE_STYLES['InternPulse'];
+  const src   = styleOf(job.source);
   const wm    = WORK_MODE_STYLES[job.workMode] ?? WORK_MODE_STYLES['On-site'];
   const skills = (job.skills || job.tags || []).slice(0, 5);
 

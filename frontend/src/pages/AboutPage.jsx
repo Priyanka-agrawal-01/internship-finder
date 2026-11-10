@@ -24,7 +24,7 @@ const CheckIcon = () => (
 
 /* ─── Platform stats ────────────────────────────────────────────────────────── */
 const PLATFORM_FEATURES = [
-  { emoji: '🔄', title: 'Real-Time Job Aggregation', desc: 'Fetches from Remotive, Arbeitnow, The Muse, and more — refreshed every 30 minutes.' },
+  { emoji: '🔄', title: 'Real-Time Job Aggregation', desc: 'Indian openings straight from 44 companies’ careers pages, plus JSearch, Himalayas and other job boards, refreshed every 30 minutes.' },
   { emoji: '🇮🇳', title: 'India-Focused', desc: 'All listings are filtered to India specifically — Bangalore, Hyderabad, Pune, Delhi, and remote India roles.' },
   { emoji: '🔔', title: 'Smart Job Alerts', desc: 'Subscribe and receive email alerts every 6 hours when new matching internships are detected.' },
   { emoji: '🏢', title: '77+ Verified Companies', desc: 'Curated directory of IT and ECE companies with stipend ranges, career links, and hiring domains.' },
@@ -208,9 +208,9 @@ export default function AboutPage() {
           </div>
           <div className="flex flex-wrap gap-3">
             {[
-              'React 18','Vite','Tailwind CSS','Node.js','Express.js',
+              'React 19','Vite','Tailwind CSS','Node.js','Express.js',
               'MongoDB','Mongoose','node-cron','Nodemailer',
-              'Remotive API','Arbeitnow API','The Muse API','Adzuna API',
+              'Greenhouse, Lever, Ashby and SmartRecruiters job boards','JSearch API','Himalayas API','Adzuna API','Remotive API','Arbeitnow API',
             ].map(t => (
               <span key={t} className="px-3 py-1.5 text-xs font-semibold text-[#2A6870] bg-[#F7F9F8] border border-[#D5E1DF] rounded-lg">{t}</span>
             ))}

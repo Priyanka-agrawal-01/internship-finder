@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ALL_SOURCES, styleOf } from '../lib/sources';
 
 /* ─── Icons ───────────────────────────────────────────────────────────────── */
 const SearchIcon = () => (
@@ -62,18 +63,6 @@ function RadioOpt({ value, current, onChange, label, count }) {
   );
 }
 
-/* ─── Source badge colours ──────────────────────────────────────────────────── */
-const SOURCE_STYLES = {
-  'Remotive':    { bg:'#FEFCE8', text:'#A16207', border:'#FDE68A', dot:'#A16207' },
-  'Arbeitnow':  { bg:'#F0FDF4', text:'#16A34A', border:'#BBF7D0', dot:'#16A34A' },
-  'The Muse':   { bg:'#FFF1F2', text:'#E11D48', border:'#FECDD3', dot:'#E11D48' },
-  'Adzuna':     { bg:'#FFF7ED', text:'#EA580C', border:'#FED7AA', dot:'#EA580C' },
-  'JSearch':    { bg:'#ECFDF5', text:'#059669', border:'#A7F3D0', dot:'#059669' },
-  'InternPulse':{ bg:'#E6F0EF', text:'#06525C', border:'#B5D2D0', dot:'#06525C' },
-};
-
-/* ─── SOURCES list ──────────────────────────────────────────────────────────── */
-const ALL_SOURCES = ['Remotive','Arbeitnow','The Muse','Adzuna','JSearch','InternPulse'];
 
 /* ─── Main component ─────────────────────────────────────────────────────────── */
 export default function SearchFilter({
@@ -199,7 +188,7 @@ export default function SearchFilter({
         <Section label="Source" defaultOpen={false}>
           <RadioOpt value="" current={selectedSource} onChange={setSelectedSource} label="All Sources" />
           {ALL_SOURCES.map(src => {
-            const s = SOURCE_STYLES[src] ?? SOURCE_STYLES['InternPulse'];
+            const s = styleOf(src);
             return (
               <label key={src} className="flex items-center gap-2.5 cursor-pointer py-0.5 group" onClick={() => setSelectedSource(src === selectedSource ? '' : src)}>
                 <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center transition-all shrink-0 ${

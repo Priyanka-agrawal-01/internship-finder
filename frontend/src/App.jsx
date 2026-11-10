@@ -10,6 +10,7 @@ import AboutPage      from './pages/AboutPage';
 import AlertsPage     from './pages/AlertsPage';
 import MyJobsPage     from './pages/MyJobsPage';
 import { BACKEND_URL } from './lib/api';
+import { ALL_SOURCES, styleOf } from './lib/sources';
 import { useAuth } from './auth/authContext';
 
 // only the site admin opens it, so it loads on its own instead of in every visitor's bundle
@@ -193,7 +194,7 @@ export default function App() {
   const [companySearch,    setCompanySearch]    = useState('');  // company text search
   const [skillsSearch,     setSkillsSearch]     = useState('');  // skills/tech
   const [selectedSource,   setSelectedSource]   = useState('');  // API source
-  const [selectedCountry,  setSelectedCountry]  = useState('');  // country
+  const [selectedCountry,  setSelectedCountry]  = useState('India');  // country: India unless the visitor clears it
   const [selectedWorkMode, setSelectedWorkMode] = useState('');  // Remote/Hybrid/On-site
   const [jobType,          setJobType]          = useState('all'); // all|internship
 
@@ -269,6 +270,14 @@ export default function App() {
   );
 
   const internshipCount = useMemo(() => jobs.filter(j => j.isInternship).length, [jobs]);
+
+  // the sources that returned listings this time, most listings first
+  const liveSources = useMemo(() => {
+    const counts = new Map();
+    for (const j of jobs) counts.set(j.source, (counts.get(j.source) || 0) + 1);
+    return ALL_SOURCES.filter(n => counts.has(n)).map(name => ({ name, count: counts.get(name) }))
+      .sort((a, b) => b.count - a.count);
+  }, [jobs]);
 
   /* ── Multi-dimension filter + sort ─────────────── */
   const filteredJobs = useMemo(() => {
@@ -414,8 +423,12 @@ export default function App() {
                     <div>
                       <h2 className="text-sm font-bold text-[#06525C]">🔍 Internship Discovery Feed</h2>
                       <p className="text-[11px] text-[#2F737D] mt-0.5">
-                        Aggregated from <span className="font-semibold text-[#06525C]">Remotive · Arbeitnow · JSearch · The Muse · Adzuna</span>
-                        {cacheStatus && <> · <span className="text-[#22C55E] font-semibold">{cacheStatus.jobCount} cached</span></>}
+                        {(() => {
+                          const boards = liveSources.filter(s => s.name !== 'Company careers').length;
+                          const company = liveSources.some(s => s.name === 'Company careers');
+                          return `From ${company ? 'companies’ own careers pages and ' : ''}${boards} job board${boards === 1 ? '' : 's'}`;
+                        })()}
+                        {cacheStatus && <> · <span className="font-semibold text-[#06525C]">{cacheStatus.jobCount} listings</span>{cacheStatus.indiaCount !== undefined && <>, <span className="font-semibold text-[#067647]">{cacheStatus.indiaCount} in India</span></>}</>}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -443,26 +456,21 @@ export default function App() {
                   
                   {/* Source badges */}
                   <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-[#EBF0EE]">
-                    {[
-                      { name:'Remotive',    bg:'#FEFCE8', text:'#A16207', border:'#FDE68A' },
-                      { name:'Arbeitnow',   bg:'#F0FDF4', text:'#16A34A', border:'#BBF7D0' },
-                      { name:'The Muse',    bg:'#FFF1F2', text:'#E11D48', border:'#FECDD3' },
-                      { name:'Adzuna',      bg:'#FFF7ED', text:'#EA580C', border:'#FED7AA' },
-                      { name:'JSearch',     bg:'#ECFDF5', text:'#059669', border:'#A7F3D0' },
-                    ].map(s => (
-                      <button
-                        key={s.name}
-                        onClick={() => setSelectedSource(s.name === selectedSource ? '' : s.name)}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border transition-all"
-                        style={{
-                          background: s.name === selectedSource ? s.text : s.bg,
-                          color: s.name === selectedSource ? 'white' : s.text,
-                          borderColor: s.border,
-                        }}
-                      >
-                        {s.name}
-                      </button>
-                    ))}
+                    {liveSources.map(({ name, count }) => {
+                      const s = styleOf(name);
+                      const on = name === selectedSource;
+                      return (
+                        <button
+                          key={name}
+                          onClick={() => setSelectedSource(on ? '' : name)}
+                          aria-pressed={on}
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border transition-all"
+                          style={{ background: on ? s.text : s.bg, color: on ? 'white' : s.text, borderColor: s.border }}
+                        >
+                          {name} <span className="opacity-75 tabular-nums">{count}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}

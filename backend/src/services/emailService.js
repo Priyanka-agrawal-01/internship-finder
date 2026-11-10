@@ -213,8 +213,8 @@ async function sendWelcomeEmail(recipientEmail, preferences = {}, unsubscribeTok
         <span style="font-size:15px;font-weight:700;color:#15803D;">You're all set!</span>
       </div>
       <p style="margin:0;font-size:13px;color:#374151;line-height:1.7;">
-        Every hour, InternPulse scans <strong>Remotive, Arbeitnow, The Muse, JSearch</strong>
-        and more for new openings. When new internships match your preferences, you'll get an email
+        Every hour, InternPulse checks <strong>44 companies’ careers pages</strong>, such as Swiggy, Paytm and Razorpay,
+        and job boards like JSearch and Himalayas for new openings in India. When new internships match your preferences, you'll get an email
         (${escapeHtml((FREQUENCY_LABELS[preferences.frequency] || FREQUENCY_LABELS['6hours']).toLowerCase())})
         with the company name, role, location, stipend, and a direct apply link.
       </p>
@@ -289,7 +289,7 @@ async function sendWelcomeEmail(recipientEmail, preferences = {}, unsubscribeTok
         'Welcome to InternPulse!',
         '',
         'Your internship alerts are now active.',
-        'Every hour we scan Remotive, Arbeitnow, The Muse, JSearch and more.',
+        'Every hour we check 44 companies’ careers pages and job boards like JSearch and Himalayas for new openings in India.',
         '',
         'Your preferences:',
         ...prefLines.map(p => '  ' + p),

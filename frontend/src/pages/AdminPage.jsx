@@ -448,7 +448,16 @@ function SavedReport() {
   );
 }
 
-const SOURCE_NAMES = { remotive: 'Remotive', arbeitnow: 'Arbeitnow', muse: 'The Muse', adzuna: 'Adzuna', jsearch: 'JSearch' };
+// What to do about a source in trouble, by what the server reported
+function sourceAdvice(s) {
+  if (!s.configured) return { tone: 'muted', text: s.key === 'jooble' ? 'Off: add a free JOOBLE_API_KEY (jooble.org/api/about)' : 'Off: no API key set' };
+  if (/HTTP 401|HTTP 403/.test(s.error || '')) return { tone: 'bad', text: 'The key was refused: create new keys and update them on the server' };
+  if (/HTTP 429/.test(s.error || '')) return { tone: 'bad', text: 'Over its request limit: it will recover when the quota resets' };
+  if (s.error) return { tone: 'bad', text: `Failing (${s.error})${s.count ? '; showing its last good listings' : ''}` };
+  if (!s.count) return { tone: 'warn', text: 'Answered with no listings' };
+  return { tone: 'good', text: 'Working' };
+}
+const TONE = { good: 'text-[#067647]', warn: 'text-[#93370D]', bad: 'text-[#B42318]', muted: 'text-[#5E8D93]' };
 
 function System() {
   const { token, user } = useAuth();
@@ -457,9 +466,8 @@ function System() {
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
   const j = jobs.data;
-  const sourceRows = useMemo(() => Object.entries(j?.cache?.sourceCounts || {})
-    .filter(([k]) => SOURCE_NAMES[k]).map(([k, count]) => ({ key: SOURCE_NAMES[k], count })).sort((a, b) => b.count - a.count), [j]);
-  const failing = sourceRows.filter(s => s.count === 0).map(s => s.key);
+  const sources = useMemo(() => [...(j?.cache?.sources || [])].sort((a, b) => b.count - a.count), [j]);
+  const troubled = sources.filter(s => s.configured && (s.error || !s.count));
 
   const run = async (what, fn) => {
     setBusy(what); setMsg('');
@@ -474,18 +482,41 @@ function System() {
         action={<button className={btnPrimary} disabled={!!busy} onClick={() => run('refresh', async () => { const r = await api('/api/admin/jobs/refresh', { method: 'POST', token }); jobs.reload(); return `Feed refreshed: ${fmtNum(r.count)} listings.`; })}>{busy === 'refresh' ? 'Refreshing…' : 'Refresh feed now'}</button>}>
         {j && (
           <>
-            <div className="grid grid-cols-3 gap-3 mb-5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
               <StatTile label="Listings" value={fmtNum(j.total)} />
+              <StatTile label="In India" value={fmtNum(j.cache.indiaCount ?? 0)} />
               <StatTile label="Internships" value={fmtNum(j.internships)} />
               <StatTile label="Posted in the last day" value={fmtNum(j.newToday)} />
             </div>
-            {failing.length > 0 && (
+            {troubled.length > 0 && (
               <p className="mb-4 rounded-lg border border-[#FEDF89] bg-[#FFFAEB] px-3 py-2 text-sm text-[#93370D]">
-                ⚠ No listings from {failing.join(', ')} on the last fetch. Check the server log: a 401 or 429 means an expired key or a used-up quota; a 404 means the source changed its API.
+                ⚠ {troubled.map(s => s.label).join(', ')} {troubled.length === 1 ? 'is' : 'are'} not adding listings right now. The table below says why.
               </p>
             )}
-            <div className="grid md:grid-cols-3 gap-5">
-              <div><h3 className="text-sm font-semibold text-[#06525C] mb-2">Raw listings per source</h3><RankBars rows={sourceRows} getValue={r => r.count} unit="listings" /></div>
+            <div className="overflow-x-auto mb-6">
+              <table className="w-full text-sm min-w-[640px]">
+                <thead className="text-xs text-[#2F737D] bg-[#F7F9F8]">
+                  <tr>{['Source', 'Listings', 'Status', 'Last fetched', 'Fetched every'].map(h => <th key={h} className="text-left font-semibold px-3 py-2">{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {sources.map(s => {
+                    const a = sourceAdvice(s);
+                    return (
+                      <tr key={s.key} className="border-t border-[#EBF0EE]">
+                        <td className="px-3 py-2 font-medium text-[#06525C]">{s.label}</td>
+                        <td className="px-3 py-2 tabular-nums text-[#2F737D]">{fmtNum(s.count)}</td>
+                        <td className={`px-3 py-2 ${TONE[a.tone]}`}>{a.text}</td>
+                        <td className="px-3 py-2 text-[#2F737D] whitespace-nowrap">{s.configured ? ago(s.fetchedAt) : '—'}</td>
+                        <td className="px-3 py-2 text-[#2F737D] whitespace-nowrap">{s.refreshMinutes >= 60 ? `${Math.round(s.refreshMinutes / 60)} h` : `${s.refreshMinutes} min`}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="text-xs text-[#5E8D93] mt-2">Refresh feed now refetches the free sources; JSearch, Adzuna and Jooble keep their own schedule so their monthly quotas last.</p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-5">
+
               <div><h3 className="text-sm font-semibold text-[#06525C] mb-2">Work mode</h3><RankBars rows={j.workModes} getValue={r => r.count} unit="listings" /></div>
               <div><h3 className="text-sm font-semibold text-[#06525C] mb-2">Countries</h3><RankBars rows={j.countries} getValue={r => r.count} unit="listings" /></div>
             </div>
