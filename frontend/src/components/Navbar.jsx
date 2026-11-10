@@ -1,17 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 /* ─── Icons ────────────────────────────────────────────────────────────────── */
 const BriefcaseIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="7" width="20" height="14" rx="2"/>
     <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-  </svg>
-);
-const UserCircleIcon = () => (
-  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <circle cx="12" cy="8" r="3"/>
-    <path d="M6.2 20a6 6 0 0 1 11.6 0"/>
   </svg>
 );
 const MenuIcon = () => (

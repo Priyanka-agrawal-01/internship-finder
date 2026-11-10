@@ -1,206 +1,220 @@
 'use strict';
 const express  = require('express');
+const crypto   = require('crypto');
 const router   = express.Router();
 const emailSvc = require('../services/emailService');
 const { isDBConnected } = require('../config/db');
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const { normalizeEmail, sanitizePreferences } = require('../utils/preferences');
+const { escapeHtml, safeUrl } = require('../utils/html');
+const { rateLimit, requireAdmin, asyncHandler } = require('../middleware/security');
 
 // In-memory fallback when MongoDB is unavailable
-const inMemorySubscribers = new Map();
+const inMemorySubscribers = new Map(); // email -> { token, prefs, active }
 
 // Lazy model getter — avoids circular require at startup
 function getSubscriber() { return require('../models/Subscriber'); }
 
+// Subscribing and requesting unsubscribe links both send email from our
+// account, so they're rate limited per IP to stop them being used for spam.
+const subscribeLimiter   = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many subscription attempts. Please try again in a few minutes.' });
+const unsubscribeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5,  message: 'Too many unsubscribe requests. Please try again in a few minutes.' });
+
+function sendInBackground(label, promise, email) {
+  promise
+    .then(result => console.log(`[Subscribe] ${label} sent to ${email} (msgId: ${result?.messageId || 'N/A'})`))
+    .catch(err => console.error(`[Subscribe] ${label} failed for ${email}: ${err.message}`));
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  POST /api/subscribe
+//  Creates a subscriber, re-activates one, or updates preferences.
+//  The welcome email is sent only for new or re-activated subscribers, so
+//  re-submitting the form can't be used to send the same inbox repeated mail.
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/', async (req, res) => {
-  console.log('[Subscribe] POST /api/subscribe — route entered');
+router.post('/', subscribeLimiter, asyncHandler(async (req, res) => {
+  const body       = req.body && typeof req.body === 'object' ? req.body : {};
+  const cleanEmail = normalizeEmail(body.email);
 
-  // ── 1. Validate input ──────────────────────────────────────────────────────
-  const { email, preferences = {} } = req.body || {};
-
-  if (!email || typeof email !== 'string') {
-    console.log('[Subscribe] Rejected — missing email');
-    return res.status(400).json({ success: false, message: 'Email address is required.' });
-  }
-
-  if (!EMAIL_REGEX.test(email.trim())) {
-    console.log('[Subscribe] Rejected — invalid email format:', email);
+  if (!cleanEmail) {
     return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
   }
 
-  const cleanEmail = email.trim().toLowerCase();
-  console.log(`[Subscribe] Processing subscription for: ${cleanEmail}`);
+  const prefs = sanitizePreferences(body.preferences);
 
-  // ── 2. Sanitise preferences ────────────────────────────────────────────────
-  const prefs = {
-    itCompanies:       preferences.itCompanies       === true,
-    eceCompanies:      preferences.eceCompanies      === true,
-    remoteInternships: preferences.remoteInternships === true,
-    productCompanies:  preferences.productCompanies  === true,
-    startups:          preferences.startups          === true,
-    aiMlRoles:         preferences.aiMlRoles         === true,
-    frontendRoles:     preferences.frontendRoles     === true,
-    backendRoles:      preferences.backendRoles      === true,
-    vlsiRoles:         preferences.vlsiRoles         === true,
-    embeddedRoles:     preferences.embeddedRoles     === true,
-    frequency:         ['instant', '6hours', 'daily'].includes(preferences.frequency) ? preferences.frequency : '6hours',
-    locations:         Array.isArray(preferences.locations) ? preferences.locations : [],
-    
-    // Legacy support
-    companies:         Array.isArray(preferences.companies) ? preferences.companies.slice(0, 10) : [],
-    roles:             Array.isArray(preferences.roles)     ? preferences.roles.slice(0, 10)     : [],
-    internshipsOnly:   preferences.internshipsOnly          !== false,
-  };
-
-  // ── 3. Persist subscriber ──────────────────────────────────────────────────
   let unsubscribeToken;
-  let isNew = true;
+  let outcome; // 'created' | 'reactivated' | 'updated'
 
   try {
     if (isDBConnected()) {
-      console.log('[Subscribe] Saving to MongoDB...');
       const Subscriber = getSubscriber();
       const existing   = await Subscriber.findOne({ email: cleanEmail });
 
       if (existing) {
-        // Re-activate or update preferences
+        outcome              = existing.active ? 'updated' : 'reactivated';
         existing.active      = true;
         existing.preferences = prefs;
         await existing.save();
         unsubscribeToken = existing.unsubscribeToken;
-        isNew = false;
-        console.log(`[Subscribe] Updated existing subscriber: ${cleanEmail}`);
       } else {
         const sub = await Subscriber.create({ email: cleanEmail, preferences: prefs });
         unsubscribeToken = sub.unsubscribeToken;
-        console.log(`[Subscribe] New subscriber created: ${cleanEmail}`);
+        outcome = 'created';
       }
     } else {
-      // In-memory fallback
       console.warn('[Subscribe] MongoDB unavailable — using in-memory fallback');
-      if (inMemorySubscribers.has(cleanEmail)) {
-        unsubscribeToken = inMemorySubscribers.get(cleanEmail).token;
-        isNew = false;
-        console.log(`[Subscribe] Updated in-memory subscriber: ${cleanEmail}`);
+      const existing = inMemorySubscribers.get(cleanEmail);
+      if (existing) {
+        outcome = existing.active ? 'updated' : 'reactivated';
+        existing.prefs  = prefs;
+        existing.active = true;
+        unsubscribeToken = existing.token;
       } else {
-        unsubscribeToken = require('crypto').randomBytes(32).toString('hex');
-        inMemorySubscribers.set(cleanEmail, { token: unsubscribeToken, prefs });
-        console.log(`[Subscribe] New in-memory subscriber: ${cleanEmail}`);
+        unsubscribeToken = crypto.randomBytes(32).toString('hex');
+        inMemorySubscribers.set(cleanEmail, { token: unsubscribeToken, prefs, active: true });
+        outcome = 'created';
       }
     }
   } catch (dbErr) {
-    // Handle MongoDB duplicate key gracefully
     if (dbErr.code === 11000) {
-      console.log(`[Subscribe] Duplicate key — already subscribed: ${cleanEmail}`);
-      // Fetch the existing token so we can still send the welcome email
-      try {
-        const Subscriber = getSubscriber();
-        const sub = await Subscriber.findOne({ email: cleanEmail });
-        if (sub) {
-          unsubscribeToken = sub.unsubscribeToken;
-          isNew = false;
-        }
-      } catch (_) { /* ignore */ }
-
-      if (!unsubscribeToken) {
-        return res.status(200).json({
-          success: true,
-          message: 'You are already subscribed! Your preferences have been kept.',
-        });
-      }
-    } else {
-      console.error('[Subscribe] DB error:', dbErr.message);
-      return res.status(500).json({
-        success: false,
-        message: 'Subscription failed due to a database error. Please try again.',
-        error: process.env.NODE_ENV === 'development' ? dbErr.message : undefined,
-      });
+      // Two requests raced to create the same subscriber — treat as an update
+      return res.status(200).json({ success: true, message: 'Your preferences have been updated.' });
     }
+    console.error('[Subscribe] DB error:', dbErr.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Subscription failed due to a database error. Please try again.',
+      error: process.env.NODE_ENV === 'development' ? dbErr.message : undefined,
+    });
   }
 
-  // ── 4. Send welcome email (non-blocking background task) ──────────────────
-  console.log('[Subscribe] Dispatching welcome email in the background...');
-  emailSvc.sendWelcomeEmail(cleanEmail, prefs, unsubscribeToken)
-    .then(result => {
-      console.log(`[Subscribe] Welcome email sent successfully to ${cleanEmail} (msgId: ${result?.messageId || 'N/A'})`);
-    })
-    .catch(emailErr => {
-      console.error(`[Subscribe] Welcome email failed for ${cleanEmail}: ${emailErr.message}`);
-    });
+  console.log(`[Subscribe] ${outcome}: ${cleanEmail}`);
 
-  // ── 5. Always return a response ────────────────────────────────────────────
-  console.log(`[Subscribe] Sending 200 response to ${cleanEmail}`);
+  if (outcome !== 'updated') {
+    sendInBackground('Welcome email', emailSvc.sendWelcomeEmail(cleanEmail, prefs, unsubscribeToken), cleanEmail);
+  }
+
   return res.status(200).json({
     success: true,
-    message: isNew
-      ? 'Successfully subscribed! Check your inbox for a welcome email.'
-      : 'Your preferences have been updated.',
+    message: outcome === 'updated'
+      ? 'Your preferences have been updated.'
+      : 'Successfully subscribed! Check your inbox for a welcome email.',
   });
-});
+}));
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  GET /api/subscribe/unsubscribe?token=xxx
+//  Unsubscribe by token (the link in every email)
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/unsubscribe', async (req, res) => {
-  const { token } = req.query;
+function readToken(value) {
+  return typeof value === 'string' && /^[a-f0-9]{16,128}$/i.test(value) ? value : null;
+}
 
+/** Returns true if a subscriber with this token was found and deactivated. */
+async function unsubscribeByToken(token) {
+  if (isDBConnected()) {
+    const sub = await getSubscriber().findOneAndUpdate(
+      { unsubscribeToken: token, active: true },
+      { $set: { active: false } },
+      { new: true }
+    );
+    if (sub) console.log(`[Subscribe] Unsubscribed: ${sub.email}`);
+    return !!sub;
+  }
+  for (const [email, data] of inMemorySubscribers) {
+    if (data.token === token && data.active) {
+      data.active = false;
+      console.log(`[Subscribe] Unsubscribed (memory): ${email}`);
+      return true;
+    }
+  }
+  return false;
+}
+
+// GET /api/subscribe/unsubscribe?token=xxx  — the link a person clicks
+router.get('/unsubscribe', asyncHandler(async (req, res) => {
+  const token = readToken(req.query.token);
   if (!token) {
-    return res.status(400).send(buildPage('Invalid Link', 'No unsubscribe token was provided.', false));
+    return res.status(400).send(buildPage('Invalid Link', 'This unsubscribe link is missing or malformed.', false));
   }
 
   try {
-    if (isDBConnected()) {
-      const Subscriber = getSubscriber();
-      const sub = await Subscriber.findOneAndUpdate(
-        { unsubscribeToken: token },
-        { $set: { active: false } },
-        { new: true }
-      );
-      if (!sub) {
-        return res.send(buildPage('Already Removed', "This unsubscribe link has already been used or doesn't exist.", true));
-      }
-      console.log(`[Subscribe] Unsubscribed: ${sub.email}`);
-    } else {
-      let found = false;
-      for (const [email, data] of inMemorySubscribers) {
-        if (data.token === token) { inMemorySubscribers.delete(email); found = true; break; }
-      }
-      if (!found) {
-        return res.send(buildPage('Not Found', "This link doesn't match any active subscription.", false));
-      }
+    const done = await unsubscribeByToken(token);
+    if (!done) {
+      return res.send(buildPage('Already Removed', "This unsubscribe link has already been used or doesn't match an active subscription.", true));
     }
     return res.send(buildPage('Unsubscribed ✓', "You've been successfully unsubscribed. You won't receive any more alerts.", true));
   } catch (err) {
     console.error('[Unsubscribe] Error:', err.message);
     return res.status(500).send(buildPage('Error', 'Something went wrong. Please try again.', false));
   }
-});
+}));
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  GET /api/subscribe/status?email=...  (debug)
+//  POST /api/subscribe/unsubscribe
+//  • With ?token=…  → RFC 8058 one-click unsubscribe (what Gmail's
+//    "Unsubscribe" button sends because of our List-Unsubscribe-Post header).
+//  • With { email } → emails that address a confirmation link. Typing an
+//    address is never enough on its own to unsubscribe someone, and the
+//    response is the same whether or not the address is subscribed.
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/status', async (req, res) => {
-  const { email } = req.query;
-  if (!email) return res.status(400).json({ success: false, message: 'Email required.' });
+// One-click requests come from mail providers' shared servers, so only the
+// email-typed branch is rate limited.
+const limitUnlessToken = (req, res, next) =>
+  readToken(req.query.token) ? next() : unsubscribeLimiter(req, res, next);
+
+router.post('/unsubscribe', limitUnlessToken, asyncHandler(async (req, res) => {
+  const token = readToken(req.query.token);
+  if (token) {
+    await unsubscribeByToken(token);
+    return res.status(200).json({ success: true, message: 'You have been unsubscribed.' });
+  }
+
+  const body       = req.body && typeof req.body === 'object' ? req.body : {};
+  const cleanEmail = normalizeEmail(body.email);
+  if (!cleanEmail) {
+    return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
+  }
+
+  let tokenToSend = null;
+  try {
+    if (isDBConnected()) {
+      const sub = await getSubscriber().findOne({ email: cleanEmail, active: true }, { unsubscribeToken: 1 }).lean();
+      tokenToSend = sub?.unsubscribeToken || null;
+    } else {
+      const mem = inMemorySubscribers.get(cleanEmail);
+      tokenToSend = mem?.active ? mem.token : null;
+    }
+  } catch (err) {
+    console.error('[Unsubscribe API] Error:', err.message);
+    return res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
+  }
+
+  if (tokenToSend) {
+    sendInBackground('Unsubscribe link', emailSvc.sendUnsubscribeLinkEmail(cleanEmail, tokenToSend), cleanEmail);
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "If that address is subscribed, we've emailed it a link to confirm unsubscribing.",
+  });
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  GET /api/subscribe/status?email=...  (admin/debug — needs x-admin-token)
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/status', requireAdmin, asyncHandler(async (req, res) => {
+  const email = normalizeEmail(req.query.email);
+  if (!email) return res.status(400).json({ success: false, message: 'A valid email is required.' });
 
   if (!isDBConnected()) {
-    const mem = inMemorySubscribers.get(email.toLowerCase());
-    return res.json({ success: true, subscribed: !!mem, source: 'memory' });
+    const mem = inMemorySubscribers.get(email);
+    return res.json({ success: true, subscribed: !!mem?.active, source: 'memory' });
   }
-  try {
-    const Subscriber = getSubscriber();
-    const sub = await Subscriber.findOne(
-      { email: email.toLowerCase() },
-      { active: 1, preferences: 1, alertCount: 1, lastAlertSentAt: 1 }
-    ).lean();
-    return res.json({ success: true, subscribed: !!sub?.active, data: sub });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-});
+  const sub = await getSubscriber().findOne(
+    { email },
+    { active: 1, preferences: 1, alertCount: 1, lastAlertSentAt: 1 }
+  ).lean();
+  return res.json({ success: true, subscribed: !!sub?.active, data: sub });
+}));
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  HTML unsubscribe page
@@ -208,14 +222,14 @@ router.get('/status', async (req, res) => {
 function buildPage(title, message, success) {
   const icon  = success ? '✅' : '❌';
   const color = success ? '#16A34A' : '#DC2626';
-  const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const FRONTEND = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>${title} — InternPulse</title>
+  <title>${escapeHtml(title)} — InternPulse</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Segoe UI',Arial,sans-serif;background:#F8FAFC;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -231,51 +245,13 @@ function buildPage(title, message, success) {
 <body>
   <div class="card">
     <div class="icon">${icon}</div>
-    <h1 style="color:${color}">${title}</h1>
-    <p>${message}</p>
-    <a class="btn" href="${FRONTEND}">Back to InternPulse</a>
+    <h1 style="color:${color}">${escapeHtml(title)}</h1>
+    <p>${escapeHtml(message)}</p>
+    <a class="btn" href="${safeUrl(FRONTEND)}">Back to InternPulse</a>
     <div class="brand"><strong>Intern</strong>Pulse — Real-time Internship Alerts</div>
   </div>
 </body>
 </html>`;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  POST /api/subscribe/unsubscribe
-// ─────────────────────────────────────────────────────────────────────────────
-router.post('/unsubscribe', async (req, res) => {
-  const { email } = req.body || {};
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json({ success: false, message: 'Email address is required.' });
-  }
-
-  const cleanEmail = email.trim().toLowerCase();
-
-  try {
-    if (isDBConnected()) {
-      const Subscriber = getSubscriber();
-      const sub = await Subscriber.findOneAndUpdate(
-        { email: cleanEmail },
-        { $set: { active: false } },
-        { new: true }
-      );
-      if (!sub) {
-        return res.status(404).json({ success: false, message: 'No active subscription found for this email.' });
-      }
-      console.log(`[Subscribe API] Unsubscribed: ${cleanEmail}`);
-    } else {
-      if (!inMemorySubscribers.has(cleanEmail)) {
-        return res.status(404).json({ success: false, message: 'No active subscription found for this email.' });
-      }
-      inMemorySubscribers.delete(cleanEmail);
-      console.log(`[Subscribe API] Unsubscribed (memory): ${cleanEmail}`);
-    }
-    return res.status(200).json({ success: true, message: 'Successfully unsubscribed from all alerts.' });
-  } catch (err) {
-    console.error('[Unsubscribe API] Error:', err.message);
-    return res.status(500).json({ success: false, message: 'Unsubscription failed due to a database error.' });
-  }
-});
-
 module.exports = router;
-

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 /* ─── Source badge colours ──────────────────────────────────────────────────── */
 const SOURCE_STYLES = {
@@ -80,11 +80,11 @@ export default function JobCard({ job }) {
               <h3 className="text-sm font-bold text-[#0F172A] leading-snug line-clamp-2">{job.title}</h3>
               <p className="text-xs text-[#64748B] font-medium mt-0.5">{job.company}</p>
             </div>
-            {/* Verified badge */}
-            {job.verifiedRecently && (
+            {/* New badge — posted in the last 24 hours */}
+            {job.isNew && (
               <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] badge-new inline-block"/>
-                Verified Recently
+                New
               </span>
             )}
           </div>
@@ -95,7 +95,7 @@ export default function JobCard({ job }) {
       <div className="flex flex-wrap gap-1.5 mb-3">
         {/* Location */}
         <span className="inline-flex items-center gap-1 text-[11px] text-[#64748B] bg-[#F8FAFC] border border-[#E2E8F0] rounded-full px-2.5 py-1">
-          📍 {job.location || 'India'}
+          📍 {job.location || 'Not specified'}
         </span>
 
         {/* Work mode */}
