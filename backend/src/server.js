@@ -78,7 +78,9 @@ app.get('/', (req, res) => {
     status:    'Healthy',
     uptime:    `${Math.round(process.uptime())}s`,
     timestamp: new Date().toISOString(),
-    database:  isDBConnected() ? 'connected' : 'not connected (set MONGODB_URI)',
+    database:  isDBConnected() ? 'connected'
+      : process.env.MONGODB_URI ? 'not connected: cannot reach MongoDB, retrying (check Atlas Network Access and your network)'
+      : 'not connected (set MONGODB_URI)',
     jobs:      { total: status.jobCount, inIndia: status.indiaCount, internships: status.internshipCount },
     sources:   status.sources ? Object.fromEntries(status.sources.map(s => [s.key, describe(s)])) : 'not fetched yet',
   });
