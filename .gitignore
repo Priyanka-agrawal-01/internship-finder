@@ -29,3 +29,8 @@ dist-ssr
 # design-skill check output (headless Chrome profiles, screenshots)
 frontend/.taste-skill/
 frontend/shots/
+
+# The project has no root package: its packages live in backend/ and frontend/.
+# Ignore npm files created by running npm at the top level by mistake.
+/package.json
+/package-lock.json
