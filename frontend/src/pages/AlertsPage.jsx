@@ -1,13 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 
-const getBackendUrl = () => {
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    return 'http://localhost:5000';
-  }
-  return import.meta.env.VITE_API_URL || 'http://localhost:5000';
-};
-const BACKEND_URL = getBackendUrl();
+import { BACKEND_URL } from '../lib/api';
+import { useAuth } from '../auth/authContext';
 
 const PREF_LABELS = [
   { key: 'itCompanies',       label: '💻 IT Companies' },
@@ -25,13 +20,15 @@ const PREF_LABELS = [
 const LOCATIONS = ['India', 'Remote', 'United States', 'Europe', 'Other Countries'];
 
 const FREQUENCIES = [
-  { value: 'instant', label: '⚡ Instant' },
+  { value: 'instant', label: '⚡ Hourly' },
   { value: '6hours', label: '⏱ Every 6 Hours' },
   { value: 'daily', label: '📅 Daily Digest' },
 ];
 
 export default function AlertsPage() {
-  const [email, setEmail] = useState('');
+  const { user } = useAuth();
+  // signed in: start from the account's address (it can still be changed)
+  const [email, setEmail] = useState(() => user?.email || '');
   
   // State for preferences checkboxes
   const [prefs, setPrefs] = useState({
@@ -94,7 +91,7 @@ export default function AlertsPage() {
         const res = await axios.post(`${BACKEND_URL}/api/subscribe/unsubscribe`, { email: payload.email });
         if (res.data.success) {
           setStatus('success');
-          setMessage(res.data.message || 'Successfully unsubscribed from all job alerts.');
+          setMessage(res.data.message || "If that address is subscribed, we've emailed it a link to confirm unsubscribing.");
         } else {
           throw new Error(res.data.message || 'Unsubscription failed.');
         }
@@ -118,24 +115,24 @@ export default function AlertsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#F7F9F8] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
         
         {/* Title / Subtitle */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded-full mb-4">
-            <span className="text-xs font-bold text-[#2563EB] tracking-wide uppercase">⚡ Real-Time Notifications</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#E6F0EF] border border-[#B5D2D0] rounded-full mb-4">
+            <span className="text-xs font-bold text-[#06525C] tracking-wide uppercase">⚡ Real-Time Notifications</span>
           </div>
-          <h1 className="text-3xl font-extrabold text-[#0F172A] tracking-tight sm:text-4xl">
+          <h1 className="text-3xl font-extrabold text-[#06525C] tracking-tight sm:text-4xl">
             InternPulse Job Alerts
           </h1>
-          <p className="mt-3 text-sm text-[#64748B] max-w-md mx-auto leading-relaxed">
-            Get notified instantly whenever new internships matching your interests are discovered.
+          <p className="mt-3 text-sm text-[#2F737D] max-w-md mx-auto leading-relaxed">
+            Get an email when new internships matching your interests are discovered. We check every hour.
           </p>
         </div>
 
         {/* Card Panel */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-[#D5E1DF] rounded-2xl shadow-sm overflow-hidden">
           <div className="p-6 sm:p-8 space-y-6">
             
             {/* Action status messages */}
@@ -173,7 +170,7 @@ export default function AlertsPage() {
 
             {/* Email Address Section */}
             <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-bold text-[#0F172A]">
+              <label htmlFor="email" className="block text-sm font-bold text-[#06525C]">
                 Email Address
               </label>
               <div className="relative rounded-xl shadow-sm">
@@ -183,7 +180,7 @@ export default function AlertsPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="block w-full border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all"
+                  className="block w-full border border-[#D5E1DF] rounded-xl px-4 py-3 text-sm text-[#06525C] placeholder:text-[#5E8D93] outline-none focus:border-[#06525C] focus:ring-2 focus:ring-[#06525C]/10 transition-all"
                   disabled={status === 'loading'}
                 />
               </div>
@@ -191,7 +188,7 @@ export default function AlertsPage() {
 
             {/* Preferences Checkboxes */}
             <div className="space-y-3">
-              <label className="block text-sm font-bold text-[#0F172A]">
+              <label className="block text-sm font-bold text-[#06525C]">
                 Subscription Preferences
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -200,8 +197,8 @@ export default function AlertsPage() {
                     key={item.key}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer select-none transition-all ${
                       prefs[item.key]
-                        ? 'bg-[#EFF6FF] border-[#BFDBFE] text-[#2563EB] font-semibold'
-                        : 'bg-white border-[#E2E8F0] text-[#64748B] hover:border-[#CBD5E1]'
+                        ? 'bg-[#E6F0EF] border-[#B5D2D0] text-[#06525C] font-semibold'
+                        : 'bg-white border-[#D5E1DF] text-[#2F737D] hover:border-[#C3D4D2]'
                     }`}
                   >
                     <input
@@ -209,7 +206,7 @@ export default function AlertsPage() {
                       checked={prefs[item.key]}
                       onChange={() => handleCheckboxChange(item.key)}
                       disabled={status === 'loading'}
-                      className="w-4 h-4 rounded border-[#CBD5E1] text-[#2563EB] focus:ring-[#2563EB]/25"
+                      className="w-4 h-4 rounded border-[#C3D4D2] text-[#06525C] focus:ring-[#06525C]/25"
                     />
                     <span className="text-xs">{item.label}</span>
                   </label>
@@ -219,7 +216,7 @@ export default function AlertsPage() {
 
             {/* Notification Frequency */}
             <div className="space-y-2">
-              <label className="block text-sm font-bold text-[#0F172A]">
+              <label className="block text-sm font-bold text-[#06525C]">
                 Notification Frequency
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -231,8 +228,8 @@ export default function AlertsPage() {
                     disabled={status === 'loading'}
                     className={`px-4 py-3 text-xs font-bold border rounded-xl transition-all ${
                       frequency === freq.value
-                        ? 'bg-[#EFF6FF] border-[#2563EB] text-[#2563EB]'
-                        : 'bg-white border-[#E2E8F0] text-[#64748B] hover:border-[#CBD5E1]'
+                        ? 'bg-[#E6F0EF] border-[#06525C] text-[#06525C]'
+                        : 'bg-white border-[#D5E1DF] text-[#2F737D] hover:border-[#C3D4D2]'
                     }`}
                   >
                     {freq.label}
@@ -243,7 +240,7 @@ export default function AlertsPage() {
 
             {/* Preferred Locations */}
             <div className="space-y-3">
-              <label className="block text-sm font-bold text-[#0F172A]">
+              <label className="block text-sm font-bold text-[#06525C]">
                 Preferred Locations
               </label>
               <div className="flex flex-wrap gap-2">
@@ -258,7 +255,7 @@ export default function AlertsPage() {
                       className={`px-3.5 py-2 rounded-full text-xs font-semibold border transition-all ${
                         isActive
                           ? 'bg-[#22C55E] text-white border-[#22C55E]'
-                          : 'bg-white text-[#64748B] border-[#E2E8F0] hover:border-[#2563EB]'
+                          : 'bg-white text-[#2F737D] border-[#D5E1DF] hover:border-[#06525C]'
                       }`}
                     >
                       {isActive ? `✓ ${loc}` : `+ ${loc}`}
@@ -269,12 +266,12 @@ export default function AlertsPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="pt-4 border-t border-[#F1F5F9] flex flex-col sm:flex-row gap-3">
+            <div className="pt-4 border-t border-[#EBF0EE] flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
                 onClick={() => executeAction('subscribe')}
                 disabled={status === 'loading'}
-                className="flex-1 py-3 bg-[#2563EB] hover:bg-[#1D4ED8] disabled:bg-[#94A3B8] text-white text-xs font-bold rounded-xl shadow-sm transition-all text-center"
+                className="flex-1 py-3 bg-[#06525C] hover:bg-[#043F47] disabled:bg-[#5E8D93] text-white text-xs font-bold rounded-xl shadow-sm transition-all text-center"
               >
                 {status === 'loading' ? 'Processing...' : 'Subscribe'}
               </button>
@@ -283,7 +280,7 @@ export default function AlertsPage() {
                 type="button"
                 onClick={() => executeAction('update')}
                 disabled={status === 'loading'}
-                className="flex-1 py-3 bg-white border border-[#CBD5E1] hover:border-[#94A3B8] disabled:opacity-55 text-[#334155] text-xs font-bold rounded-xl transition-all text-center"
+                className="flex-1 py-3 bg-white border border-[#C3D4D2] hover:border-[#5E8D93] disabled:opacity-55 text-[#1F5F68] text-xs font-bold rounded-xl transition-all text-center"
               >
                 Update Preferences
               </button>
@@ -303,7 +300,7 @@ export default function AlertsPage() {
 
         {/* Back link */}
         <div className="text-center mt-6">
-          <p className="text-xs text-[#94A3B8]">
+          <p className="text-xs text-[#5E8D93]">
             Need help? Contact our support or manage your subscription anytime.
           </p>
         </div>

@@ -1,13 +1,35 @@
 'use strict';
 const nodemailer = require('nodemailer');
 const { getTransporter } = require('../config/mail');
+const { escapeHtml, safeUrl } = require('../utils/html');
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const BACKEND_URL  = process.env.BACKEND_URL  || 'http://localhost:5000';
+// FRONTEND_URL may list several CORS origins separated by commas; links use the first
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim().replace(/\/+$/, '');
+// Render sets RENDER_EXTERNAL_URL automatically, so unsubscribe links work there without BACKEND_URL
+const BACKEND_URL  = (process.env.BACKEND_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5000').replace(/\/+$/, '');
 const FROM_ADDRESS = process.env.EMAIL_FROM   || '"InternPulse Alerts" <alerts@internpulse.dev>';
 
 // Maximum time (ms) to wait for transporter.sendMail to complete
 const SEND_TIMEOUT_MS = 12000;
+
+// Labels for the welcome email's preference summary (mirrors AlertsPage.jsx)
+const PREF_LABELS = [
+  ['itCompanies',       '💻 IT Companies'],
+  ['eceCompanies',      '🔌 ECE Companies'],
+  ['remoteInternships', '🌐 Remote Internships'],
+  ['productCompanies',  '🏢 Product Companies'],
+  ['startups',          '🚀 Startups'],
+  ['aiMlRoles',         '🧠 AI/ML Roles'],
+  ['frontendRoles',     '🎨 Frontend Roles'],
+  ['backendRoles',      '⚙️ Backend Roles'],
+  ['vlsiRoles',         '📟 VLSI Roles'],
+  ['embeddedRoles',     '🕹️ Embedded Roles'],
+];
+const FREQUENCY_LABELS = {
+  instant:  'Hourly',
+  '6hours': 'Every 6 hours',
+  daily:    'Daily digest',
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  TIMEOUT WRAPPER  — ensures email sending never hangs forever
@@ -35,7 +57,7 @@ function wrapLayout(bodyHtml, preheader = '') {
   <title>InternPulse</title>
 </head>
 <body style="margin:0;padding:0;background:#F8FAFC;font-family:'Segoe UI',Arial,sans-serif;">
-  ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;color:transparent;">${preheader}</div>` : ''}
+  ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;color:transparent;">${escapeHtml(preheader)}</div>` : ''}
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;padding:32px 16px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0"
@@ -96,22 +118,28 @@ const AVATAR_COLORS = [
 ];
 function logoHtml(company = '') {
   const [bg, fg] = AVATAR_COLORS[(company.charCodeAt(0) || 0) % AVATAR_COLORS.length];
-  const initials = (company || '??').slice(0, 2).toUpperCase();
+  const initials = escapeHtml((company || '??').slice(0, 2).toUpperCase());
   return `<div style="width:52px;height:52px;border-radius:12px;background:${bg};color:${fg};font-size:18px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;border:1px solid ${fg}30;text-align:center;line-height:52px;">${initials}</div>`;
+}
+
+// Link to the one-click unsubscribe endpoint for a subscriber's token
+function unsubscribeUrl(token) {
+  return `${BACKEND_URL}/api/subscribe/unsubscribe?token=${encodeURIComponent(token || '')}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  JOB CARD HTML (used in alert emails)
+//  Every job field comes from a third-party API, so all of it is escaped.
 // ─────────────────────────────────────────────────────────────────────────────
 function jobCardHtml(job) {
   const stipendBadge = job.stipend
-    ? `<span style="background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">💰 ${job.stipend}</span>`
+    ? `<span style="background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">💰 ${escapeHtml(job.stipend)}</span>`
     : '';
-  const locationBadge = `<span style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;">📍 ${job.location || 'India'}</span>`;
-  const sourceBadge   = `<span style="background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;">${job.source || 'InternPulse'}</span>`;
+  const locationBadge = `<span style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;">📍 ${escapeHtml(job.location || 'Not specified')}</span>`;
+  const sourceBadge   = `<span style="background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;">${escapeHtml(job.source || 'InternPulse')}</span>`;
   const internBadge   = job.isInternship ? `<span style="background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;">🎓 Internship</span>` : '';
   const tagsHtml = (job.tags || []).slice(0, 4)
-    .map(t => `<span style="background:#F1F5F9;color:#475569;border-radius:6px;padding:3px 8px;font-size:11px;margin:2px;">${t}</span>`)
+    .map(t => `<span style="background:#F1F5F9;color:#475569;border-radius:6px;padding:3px 8px;font-size:11px;margin:2px;">${escapeHtml(t)}</span>`)
     .join('');
 
   return `
@@ -121,14 +149,14 @@ function jobCardHtml(job) {
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td width="60" valign="top">${logoHtml(job.company)}</td>
         <td style="padding-left:14px;" valign="top">
-          <div style="font-size:16px;font-weight:700;color:#0F172A;line-height:1.3;margin-bottom:3px;">${job.title}</div>
-          <div style="font-size:13px;color:#64748B;font-weight:500;">${job.company}</div>
+          <div style="font-size:16px;font-weight:700;color:#0F172A;line-height:1.3;margin-bottom:3px;">${escapeHtml(job.title)}</div>
+          <div style="font-size:13px;color:#64748B;font-weight:500;">${escapeHtml(job.company)}</div>
         </td>
       </tr></table>
       <div style="margin-top:14px;">${internBadge} ${stipendBadge} ${locationBadge} ${sourceBadge}</div>
       ${tagsHtml ? `<div style="margin-top:10px;">${tagsHtml}</div>` : ''}
       <div style="margin-top:18px;">
-        <a href="${job.url}" target="_blank"
+        <a href="${safeUrl(job.url)}" target="_blank"
           style="display:inline-block;background:#2563EB;color:#ffffff;text-decoration:none;padding:11px 24px;border-radius:10px;font-size:13px;font-weight:700;">
           Apply Now →
         </a>
@@ -147,19 +175,20 @@ async function sendWelcomeEmail(recipientEmail, preferences = {}, unsubscribeTok
   console.log(`[Email] sendWelcomeEmail() called for: ${recipientEmail}`);
 
   const { transporter, isTestAccount } = await getTransporter();
-  const unsubUrl = `${BACKEND_URL}/api/subscribe/unsubscribe?token=${unsubscribeToken}`;
+  const unsubUrl = unsubscribeUrl(unsubscribeToken);
 
-  // Build preference summary
+  // Build preference summary (companies/roles/locations are user input → escaped below)
   const prefLines = [
-    preferences.itCompanies    ? '💻 IT Companies (Google, Microsoft, Flipkart, Swiggy…)'  : null,
-    preferences.eceCompanies   ? '🔌 ECE Companies (Qualcomm, Intel, AMD, Texas Instruments…)' : null,
+    ...PREF_LABELS.filter(([key]) => preferences[key]).map(([, label]) => label),
     preferences.internshipsOnly !== false ? '🎓 Internships only' : '📋 All openings',
+    (preferences.locations || []).length ? `📍 Locations: ${preferences.locations.join(', ')}` : null,
+    `⏱ Frequency: ${FREQUENCY_LABELS[preferences.frequency] || FREQUENCY_LABELS['6hours']}`,
     ...(preferences.companies || []).map(c => `📌 Specific: ${c}`),
     ...(preferences.roles     || []).map(r => `🔍 Role: ${r}`),
   ].filter(Boolean);
 
   const prefHtml = prefLines.map(p =>
-    `<tr><td style="padding:5px 0;"><div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;">${p}</div></td></tr>`
+    `<tr><td style="padding:5px 0;"><div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#374151;">${escapeHtml(p)}</div></td></tr>`
   ).join('');
 
   const body = `
@@ -184,9 +213,10 @@ async function sendWelcomeEmail(recipientEmail, preferences = {}, unsubscribeTok
         <span style="font-size:15px;font-weight:700;color:#15803D;">You're all set!</span>
       </div>
       <p style="margin:0;font-size:13px;color:#374151;line-height:1.7;">
-        Every <strong>6 hours</strong>, InternPulse scans <strong>Remotive, Arbeitnow, The Muse, JSearch</strong>
-        and more for new openings. The moment a new internship matching your preferences is found,
-        you'll receive an email with the company name, role, location, stipend, and a direct apply link.
+        Every hour, InternPulse checks <strong>44 companies’ careers pages</strong>, such as Swiggy, Paytm and Razorpay,
+        and job boards like JSearch and Himalayas for new openings in India. When new internships match your preferences, you'll get an email
+        (${escapeHtml((FREQUENCY_LABELS[preferences.frequency] || FREQUENCY_LABELS['6hours']).toLowerCase())})
+        with the company name, role, location, stipend, and a direct apply link.
       </p>
     </div>
 
@@ -258,12 +288,11 @@ async function sendWelcomeEmail(recipientEmail, preferences = {}, unsubscribeTok
       text: [
         'Welcome to InternPulse!',
         '',
-        'Your real-time internship alert system is now active.',
-        'Every 6 hours we scan Remotive, Arbeitnow, The Muse, JSearch and more.',
+        'Your internship alerts are now active.',
+        'Every hour we check 44 companies’ careers pages and job boards like JSearch and Himalayas for new openings in India.',
         '',
-        'IT Companies: ' + (preferences.itCompanies  ? 'Yes' : 'No'),
-        'ECE Companies: '+ (preferences.eceCompanies ? 'Yes' : 'No'),
-        'Internships only: ' + (preferences.internshipsOnly !== false ? 'Yes' : 'No'),
+        'Your preferences:',
+        ...prefLines.map(p => '  ' + p),
         '',
         'Browse internships: ' + FRONTEND_URL,
         'Unsubscribe:        ' + unsubUrl,
@@ -292,7 +321,7 @@ async function sendJobAlertEmail(recipientEmail, newJobs, unsubscribeToken) {
   console.log(`[Email] sendJobAlertEmail() → ${recipientEmail} (${newJobs.length} jobs)`);
 
   const { transporter, isTestAccount } = await getTransporter();
-  const unsubUrl = `${BACKEND_URL}/api/subscribe/unsubscribe?token=${unsubscribeToken}`;
+  const unsubUrl = unsubscribeUrl(unsubscribeToken);
   const first    = newJobs[0];
 
   const subject = newJobs.length === 1
@@ -306,7 +335,7 @@ async function sendJobAlertEmail(recipientEmail, newJobs, unsubscribeToken) {
       </div>
       <h1 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#0F172A;line-height:1.3;">
         ${newJobs.length === 1
-          ? `New Internship at <span style="color:#2563EB;">${first.company}</span>`
+          ? `New Internship at <span style="color:#2563EB;">${escapeHtml(first.company)}</span>`
           : `${newJobs.length} New Internships Just Posted`}
       </h1>
       <p style="margin:0;color:#64748B;font-size:14px;">
@@ -325,7 +354,7 @@ async function sendJobAlertEmail(recipientEmail, newJobs, unsubscribeToken) {
 
     <p style="text-align:center;font-size:11px;color:#CBD5E1;margin-top:20px;">
       <a href="${unsubUrl}" style="color:#94A3B8;text-decoration:underline;">Unsubscribe instantly</a>
-      &nbsp;·&nbsp; Alerts run every 6 hours
+      &nbsp;·&nbsp; Change how often you get alerts on the InternPulse Alerts page
     </p>`;
 
   const preheader = `${newJobs.length} new internship${newJobs.length > 1 ? 's' : ''} — ${first.company}${newJobs.length > 1 ? ` and ${newJobs.length - 1} more` : ''} just posted`;
@@ -338,7 +367,7 @@ async function sendJobAlertEmail(recipientEmail, newJobs, unsubscribeToken) {
       subject,
       html,
       text: newJobs.map(j =>
-        `${j.title} at ${j.company}\nLocation: ${j.location || 'India'}${j.stipend ? `\nStipend: ${j.stipend}` : ''}\nApply: ${j.url}`
+        `${j.title} at ${j.company}\nLocation: ${j.location || 'Not specified'}${j.stipend ? `\nStipend: ${j.stipend}` : ''}\nApply: ${j.url}`
       ).join('\n\n') + `\n\n---\nUnsubscribe: ${unsubUrl}`,
       headers: {
         'List-Unsubscribe':      `<${unsubUrl}>`,
@@ -354,4 +383,79 @@ async function sendJobAlertEmail(recipientEmail, newJobs, unsubscribeToken) {
   return { messageId: info.messageId, previewUrl };
 }
 
-module.exports = { sendWelcomeEmail, sendJobAlertEmail, sendSubscriptionEmail: sendWelcomeEmail };
+// ─────────────────────────────────────────────────────────────────────────────
+//  UNSUBSCRIBE LINK EMAIL
+//  Sent when someone asks to unsubscribe by typing an email address, so only
+//  the owner of that inbox can actually complete the unsubscribe.
+// ─────────────────────────────────────────────────────────────────────────────
+async function sendUnsubscribeLinkEmail(recipientEmail, unsubscribeToken) {
+  const { transporter, isTestAccount } = await getTransporter();
+  const unsubUrl = unsubscribeUrl(unsubscribeToken);
+
+  const body = `
+    <div style="text-align:center;">
+      <h1 style="margin:0 0 12px;font-size:22px;font-weight:800;color:#0F172A;">Unsubscribe from InternPulse alerts?</h1>
+      <p style="margin:0 0 24px;color:#64748B;font-size:14px;line-height:1.6;">
+        Someone (hopefully you) asked to stop internship alerts for this address.
+        Click the button below to confirm. If this wasn't you, ignore this email and nothing will change.
+      </p>
+      <a href="${unsubUrl}"
+        style="display:inline-block;background:#DC2626;color:#ffffff;text-decoration:none;padding:13px 32px;border-radius:10px;font-size:14px;font-weight:700;">
+        Confirm unsubscribe
+      </a>
+    </div>`;
+
+  const info = await withTimeout(
+    transporter.sendMail({
+      from:    FROM_ADDRESS,
+      to:      recipientEmail,
+      subject: 'Confirm unsubscribe from InternPulse alerts',
+      html:    wrapLayout(body, 'Confirm that you want to stop InternPulse alerts'),
+      text:    `Someone asked to stop InternPulse alerts for this address.\nConfirm here: ${unsubUrl}\nIf this wasn't you, ignore this email.`,
+    }),
+    SEND_TIMEOUT_MS,
+    'sendUnsubscribeLinkEmail'
+  );
+
+  const previewUrl = isTestAccount ? nodemailer.getTestMessageUrl(info) : null;
+  if (previewUrl) console.log(`[Email] Unsubscribe-link preview: ${previewUrl}`);
+  return { messageId: info.messageId, previewUrl };
+}
+
+/**
+ * A short email to the admin's own address, sent from the admin panel to check that
+ * mail goes out (and whether it lands in the inbox or in spam).
+ */
+async function sendTestEmail(recipientEmail) {
+  const { transporter, isTestAccount } = await getTransporter();
+  const sentAt = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#06525C;">InternPulse can send email</h1>
+    <p style="margin:0;color:#2F737D;font-size:14px;line-height:1.6;">
+      This test was sent from the admin panel at ${escapeHtml(sentAt)} (IST). If it reached your inbox,
+      welcome emails and job alerts will too. If it is in spam, mark it "Not spam".
+    </p>`;
+  const info = await withTimeout(
+    transporter.sendMail({
+      from:    FROM_ADDRESS,
+      to:      recipientEmail,
+      subject: 'InternPulse test email',
+      html:    wrapLayout(body, 'A test from the InternPulse admin panel'),
+      text:    `InternPulse can send email. This test was sent from the admin panel at ${sentAt} (IST).`,
+    }),
+    SEND_TIMEOUT_MS,
+    'sendTestEmail'
+  );
+  const previewUrl = isTestAccount ? nodemailer.getTestMessageUrl(info) : null;
+  return { messageId: info.messageId, previewUrl, testInbox: !!isTestAccount };
+}
+
+module.exports = {
+  sendWelcomeEmail,
+  sendJobAlertEmail,
+  sendUnsubscribeLinkEmail,
+  sendTestEmail,
+  sendSubscriptionEmail: sendWelcomeEmail,
+  // exported for tests
+  jobCardHtml,
+};

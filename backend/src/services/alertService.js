@@ -2,6 +2,7 @@
 const cron        = require('node-cron');
 const { getJobs } = require('./jobService');
 const emailSvc    = require('./emailService');
+const { jobMatchesPreferences } = require('./jobMatcher');
 const { isDBConnected } = require('../config/db');
 
 // Lazy-require models so the app still boots when DB is absent
@@ -11,142 +12,51 @@ const getModels = () => {
   return { Subscriber, JobSnapshot };
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  PREFERENCE MATCHING
-//  Returns true if the job satisfies the subscriber's preferences.
-// ─────────────────────────────────────────────────────────────────────────────
+// Minimum hours between two alert emails for each frequency setting.
+// The cron runs hourly, so 'instant' means "within the hour".
+const FREQUENCY_MIN_HOURS = {
+  instant: 0,
+  '6hours': 5.5,   // a little slack so cron timing jitter doesn't skip a whole cycle
+  daily:    23,
+};
+const MAX_LOOKBACK_MS     = 7 * 24 * 3600 * 1000;  // never alert about jobs first seen more than a week ago
+const MAX_JOBS_PER_EMAIL  = 5;
 
-// Known ECE companies (mirrors companiesData.js categories)
-const ECE_COMPANIES = new Set([
-  'Qualcomm','Intel','AMD','Cadence','Synopsys','Broadcom',
-  'Texas Instruments','Marvell','MediaTek','Nokia','Ericsson',
-  'Samsung Semiconductors','Micron Technology','NXP Semiconductors',
-  'STMicroelectronics','Infineon Technologies','Renesas','Keysight Technologies',
-  'National Instruments','Analog Devices','Lam Research','Applied Materials',
-  'ASML','NVIDIA','ARM Holdings','Bosch','Siemens','Honeywell','Rockwell Automation',
-  'ABB','Emerson','Schneider Electric','GE Digital','L&T Technology Services',
-  'Tata Elxsi','KPIT Technologies','Continental','Harman','Visteon','Aptiv',
-  'Mphasis','Zensar Technologies','Cyient','LTTS',
-]);
-
-// Helper to check if a string contains any of the keywords
-function containsKeywords(text, keywords) {
-  if (!text) return false;
-  const lower = text.toLowerCase();
-  return keywords.some(kw => lower.includes(kw));
+function isDue(sub, now) {
+  const minHours = FREQUENCY_MIN_HOURS[sub.preferences?.frequency] ?? FREQUENCY_MIN_HOURS['6hours'];
+  if (!sub.lastAlertSentAt) return true;
+  const hoursSince = (now - new Date(sub.lastAlertSentAt).getTime()) / 3600000;
+  return hoursSince >= minHours;
 }
 
-function jobMatchesPreferences(job, prefs) {
-  const {
-    itCompanies       = false,
-    eceCompanies      = false,
-    remoteInternships = false,
-    productCompanies  = false,
-    startups          = false,
-    aiMlRoles         = false,
-    frontendRoles     = false,
-    backendRoles      = false,
-    vlsiRoles         = false,
-    embeddedRoles     = false,
-    locations         = [],
-    internshipsOnly   = true,
-  } = prefs;
+/** The cycle's key: its UTC hour, e.g. "2026-11-10T19". */
+const cycleKey = date => date.toISOString().slice(0, 13);
 
-  // 1. Internship filter
-  if (internshipsOnly && !job.isInternship) return false;
-
-  // 2. IT / ECE Company filter
-  const isECE = ECE_COMPANIES.has(job.company);
-  const isIT  = !isECE;
-
-  // If either IT or ECE is selected, we enforce it. If both are selected or both are false, it doesn't filter out by company type.
-  if ((itCompanies || eceCompanies) && !(itCompanies && eceCompanies)) {
-    if (itCompanies && !isIT) return false;
-    if (eceCompanies && !isECE) return false;
+/**
+ * Claim this hour's cycle for this server. Returns false when another server
+ * that shares the database (a local dev server and the deployed one, say)
+ * already claimed it, so subscribers never get the same alert twice.
+ */
+async function claimCycle(date) {
+  const AlertRun = require('../models/AlertRun');
+  try {
+    await AlertRun.create({ _id: cycleKey(date), host: require('os').hostname() });
+    return true;
+  } catch (err) {
+    if (err.code === 11000) return false;
+    throw err;
   }
-
-  // 3. Remote Internships filter
-  if (remoteInternships) {
-    const isRemote = job.workMode === 'Remote' || job.isRemote || containsKeywords(job.location || '', ['remote']);
-    if (!isRemote) return false;
-  }
-
-  // 4. Product Companies filter
-  if (productCompanies) {
-    const PRODUCT_COMPANIES = new Set([
-      'Google', 'Microsoft', 'Amazon', 'Adobe', 'Flipkart', 'Cisco', 'NVIDIA', 'Atlassian', 'PayPal', 
-      'Samsung', 'Oracle', 'Salesforce', 'Intuit', 'ServiceNow', 'VMware', 'Walmart', 'Uber', 'LinkedIn', 'DE Shaw'
-    ]);
-    if (!PRODUCT_COMPANIES.has(job.company)) return false;
-  }
-
-  // 5. Startups filter
-  if (startups) {
-    const STARTUPS = new Set(['Razorpay', 'Zomato', 'Swiggy', 'Paytm', 'Meesho', 'PhonePe', 'Cred', 'Groww']);
-    const isStartupSource = containsKeywords(job.source || '', ['remotive', 'wellfound']);
-    if (!STARTUPS.has(job.company) && !isStartupSource) return false;
-  }
-
-  // 6. Role filters
-  const anyRoleChecked = aiMlRoles || frontendRoles || backendRoles || vlsiRoles || embeddedRoles;
-  if (anyRoleChecked) {
-    const titleAndTags = (job.title + ' ' + (job.tags || []).join(' ')).toLowerCase();
-    let matched = false;
-
-    if (aiMlRoles && containsKeywords(titleAndTags, ['ai', 'ml', 'machine learning', 'deep learning', 'nlp', 'data science', 'computer vision', 'artificial intelligence'])) {
-      matched = true;
-    }
-    if (frontendRoles && containsKeywords(titleAndTags, ['frontend', 'front-end', 'react', 'vue', 'angular', 'html', 'css', 'ui', 'ux', 'web dev', 'web developer'])) {
-      matched = true;
-    }
-    if (backendRoles && containsKeywords(titleAndTags, ['backend', 'back-end', 'node', 'express', 'django', 'spring', 'springboot', 'flask', 'golang', 'java', 'c#', 'sql', 'python', 'apis', 'rest'])) {
-      matched = true;
-    }
-    if (vlsiRoles && containsKeywords(titleAndTags, ['vlsi', 'rtl', 'verilog', 'systemverilog', 'asic', 'fpga', 'synthesis', 'uvm', 'verification', 'ic design', 'analog design', 'digital design'])) {
-      matched = true;
-    }
-    if (embeddedRoles && containsKeywords(titleAndTags, ['embedded', 'firmware', 'microcontroller', 'mcu', 'iot', 'rtos', 'arduino', 'raspberry pi', 'stm32', 'device driver'])) {
-      matched = true;
-    }
-
-    if (!matched) return false;
-  }
-
-  // 7. Location filters
-  if (locations && locations.length > 0) {
-    const jobCountry = (job.country || '').toLowerCase();
-    const jobLoc = (job.location || '').toLowerCase();
-    
-    const matchesLocation = locations.some(loc => {
-      if (loc === 'India') return jobCountry === 'india' || jobLoc.includes('india');
-      if (loc === 'Remote') return job.workMode === 'Remote' || job.isRemote || jobLoc.includes('remote');
-      if (loc === 'United States') return jobCountry === 'united states' || jobLoc.includes('united states') || jobLoc.includes(' us') || jobLoc.includes('usa');
-      if (loc === 'Europe') {
-        const europeanCountries = ['germany', 'united kingdom', 'uk', 'france', 'netherlands', 'poland', 'ireland', 'sweden', 'switzerland', 'spain', 'italy'];
-        return europeanCountries.includes(jobCountry) || europeanCountries.some(c => jobLoc.includes(c));
-      }
-      if (loc === 'Other Countries') {
-        const isIndia = jobCountry === 'india' || jobLoc.includes('india');
-        const isUS = jobCountry === 'united states' || jobLoc.includes('united states') || jobLoc.includes(' us') || jobLoc.includes('usa');
-        const europeanCountries = ['germany', 'united kingdom', 'uk', 'france', 'netherlands', 'poland', 'ireland', 'sweden', 'switzerland', 'spain', 'italy'];
-        const isEurope = europeanCountries.includes(jobCountry) || europeanCountries.some(c => jobLoc.includes(c));
-        return !isIndia && !isUS && !isEurope;
-      }
-      return false;
-    });
-
-    if (!matchesLocation) return false;
-  }
-
-  return true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  MAIN ALERT CYCLE
-//  1. Fetch fresh jobs from all sources
-//  2. Diff against JobSnapshot collection → find truly new jobs
-//  3. Insert new jobs into snapshot
-//  4. For each subscriber, find matching new jobs and send email
+//  1. Fetch current jobs and record any we haven't seen before (JobSnapshot)
+//  2. For each subscriber whose frequency says they're due, collect jobs first
+//     seen since their last alert (or since they subscribed) that match their
+//     preferences, and email up to MAX_JOBS_PER_EMAIL of them.
+//
+//  Because matching is based on "first seen since your last alert", a daily
+//  subscriber still gets jobs that appeared during cycles they were skipped.
 // ─────────────────────────────────────────────────────────────────────────────
 async function runAlertCycle() {
   console.log(`\n[AlertService] ─── Alert cycle started at ${new Date().toISOString()} ───`);
@@ -156,83 +66,106 @@ async function runAlertCycle() {
     return;
   }
 
+  const startedAt = new Date();
+  if (!(await claimCycle(startedAt))) {
+    console.log('[AlertService] Another server sharing this database already ran this hour\'s cycle — skipping.');
+    return;
+  }
+
+  // what this cycle did, kept on its AlertRun for the admin panel
+  const stats = { jobs: 0, newJobs: 0, subscribers: 0, due: 0, sent: 0, failed: 0, error: '' };
+  try {
+    await alertCycleBody(stats);
+  } catch (err) {
+    stats.error = err.message;
+    throw err;
+  } finally {
+    await require('../models/AlertRun')
+      .updateOne({ _id: cycleKey(startedAt) }, { $set: { ...stats, finishedAt: new Date() } })
+      .catch(err => console.error('[AlertService] Could not record the cycle:', err.message));
+  }
+}
+
+async function alertCycleBody(stats) {
   const { Subscriber, JobSnapshot } = getModels();
 
   // 1. Fetch all current live jobs
   let freshJobs;
   try {
     freshJobs = await getJobs();
-    console.log(`[AlertService] Fetched ${freshJobs.length} fresh jobs`);
+    stats.jobs = freshJobs.length;
+    console.log(`[AlertService] Fetched ${freshJobs.length} current jobs`);
   } catch (err) {
     console.error('[AlertService] Job fetch failed:', err.message);
+    stats.error = `Job fetch failed: ${err.message}`;
     return;
   }
 
-  // 2. Find which jobs are genuinely new (not yet in snapshot)
-  const existingIds = new Set(
-    (await JobSnapshot.find({}, { jobId: 1, _id: 0 }).lean()).map(s => s.jobId)
+  // 2. Record jobs we have never seen before
+  const ids = freshJobs.map(j => j.id).filter(Boolean);
+  const known = new Set(
+    (await JobSnapshot.find({ jobId: { $in: ids } }, { jobId: 1, _id: 0 }).lean()).map(s => s.jobId)
   );
-
-  const newJobs = freshJobs.filter(j => j.id && !existingIds.has(j.id));
+  const newJobs = freshJobs.filter(j => j.id && !known.has(j.id));
+  stats.newJobs = newJobs.length;
   console.log(`[AlertService] ${newJobs.length} new jobs detected (${freshJobs.length - newJobs.length} already known)`);
 
-  if (newJobs.length === 0) {
-    console.log('[AlertService] No new openings — no emails sent.');
-    return;
-  }
-
-  // 3. Persist new jobs to snapshot
-  const snapshotDocs = newJobs.map(j => ({
-    jobId:       j.id,
-    title:       j.title,
-    company:     j.company,
-    location:    j.location,
-    url:         j.url,
-    source:      j.source,
-    stipend:     j.stipend || null,
-    tags:        j.tags || [],
-    isInternship: j.isInternship,
-    firstSeenAt: new Date(),
-    alertSent:   false,
-  }));
-
-  try {
-    await JobSnapshot.insertMany(snapshotDocs, { ordered: false }); // ordered:false = skip dups gracefully
-    console.log(`[AlertService] Stored ${snapshotDocs.length} new job snapshots`);
-  } catch (err) {
-    // E11000 bulk duplicate errors are fine — just log count
-    const inserted = snapshotDocs.length - (err.writeErrors?.length ?? 0);
-    console.log(`[AlertService] Stored ~${inserted} snapshots (some may have been duplicates)`);
-  }
-
-  // 4. Find all active subscribers and send matching alerts
-  const subscribers = await Subscriber.find({ active: true }).lean();
-  
-  const toAlert = subscribers.filter(sub => {
-    const freq = sub.preferences?.frequency || '6hours';
-    if (freq === 'daily') {
-      if (sub.lastAlertSentAt) {
-        const hoursSince = (Date.now() - new Date(sub.lastAlertSentAt).getTime()) / 3600000;
-        if (hoursSince < 22) {
-          console.log(`[AlertService] Skipping daily subscriber ${sub.email} (last sent ${hoursSince.toFixed(1)}h ago)`);
-          return false;
-        }
-      }
+  if (newJobs.length > 0) {
+    const firstSeenAt = new Date();
+    const snapshotDocs = newJobs.map(j => ({
+      jobId:        j.id,
+      title:        j.title,
+      company:      j.company,
+      location:     j.location || '',
+      country:      j.country || '',
+      workMode:     j.workMode || '',
+      isRemote:     j.isRemote === true,
+      url:          j.url,
+      source:       j.source,
+      stipend:      j.stipend || null,
+      tags:         j.tags || [],
+      isInternship: j.isInternship === true,
+      postedAt:     j.postedAt ? new Date(j.postedAt) : null,
+      firstSeenAt,
+    }));
+    try {
+      await JobSnapshot.insertMany(snapshotDocs, { ordered: false }); // ordered:false = skip dups gracefully
+      console.log(`[AlertService] Stored ${snapshotDocs.length} new job snapshots`);
+    } catch (err) {
+      const inserted = snapshotDocs.length - (err.writeErrors?.length ?? 0);
+      console.log(`[AlertService] Stored ~${inserted} snapshots (some may have been duplicates)`);
     }
-    return true;
-  });
+  }
 
-  console.log(`[AlertService] Notifying ${toAlert.length} active subscribers (out of ${subscribers.length} total active)`);
+  // 3. Work out which subscribers are due an email this cycle
+  const now = Date.now();
+  const subscribers = await Subscriber.find({ active: true }).lean();
+  const due = subscribers.filter(sub => isDue(sub, now));
+  stats.subscribers = subscribers.length;
+  stats.due = due.length;
+  console.log(`[AlertService] ${due.length} of ${subscribers.length} active subscribers are due this cycle`);
+  if (due.length === 0) return;
+
+  // 4. Load every job first seen in the look-back window, newest first
+  const floor  = now - MAX_LOOKBACK_MS;
+  const recent = await JobSnapshot.find({ firstSeenAt: { $gt: new Date(floor) } })
+    .sort({ firstSeenAt: -1 })
+    .lean();
 
   let emailsSent = 0;
   let emailsFailed = 0;
 
-  for (const sub of toAlert) {
-    const matching = newJobs.filter(j => jobMatchesPreferences(j, sub.preferences || {}));
+  for (const sub of due) {
+    const since = Math.max(
+      new Date(sub.lastAlertSentAt || sub.createdAt || 0).getTime(),
+      floor
+    );
+    const matching = recent.filter(j =>
+      new Date(j.firstSeenAt).getTime() > since && jobMatchesPreferences(j, sub.preferences || {})
+    );
     if (matching.length === 0) continue;
 
-    // Cap at 5 jobs per email to keep it focused
-    const toSend = matching.slice(0, 5);
+    const toSend = matching.slice(0, MAX_JOBS_PER_EMAIL).map(j => ({ ...j, id: j.jobId }));
 
     try {
       await emailSvc.sendJobAlertEmail(sub.email, toSend, sub.unsubscribeToken);
@@ -241,28 +174,27 @@ async function runAlertCycle() {
         { $set: { lastAlertSentAt: new Date() }, $inc: { alertCount: 1 } }
       );
       emailsSent++;
+      stats.sent++;
       console.log(`[AlertService] ✉ Alert sent to ${sub.email} (${toSend.length} jobs)`);
     } catch (err) {
       emailsFailed++;
+      stats.failed++;
       console.error(`[AlertService] ✗ Failed to email ${sub.email}:`, err.message);
     }
   }
-
-  // 5. Mark snapshots as alerted
-  await JobSnapshot.updateMany(
-    { jobId: { $in: newJobs.map(j => j.id) } },
-    { $set: { alertSent: true } }
-  ).catch(() => {}); // non-critical
 
   console.log(`[AlertService] ─── Cycle complete: ${emailsSent} sent, ${emailsFailed} failed ───\n`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  CRON SCHEDULER  — runs every 6 hours
-//  Cron: "0 */6 * * *"  → at 00:00, 06:00, 12:00, 18:00 daily
+//  CRON SCHEDULER  — runs hourly by default ("0 * * * *").
+//  Each subscriber's own frequency (instant / 6hours / daily) decides whether
+//  they actually get an email in a given cycle.
 // ─────────────────────────────────────────────────────────────────────────────
+const DEFAULT_ALERT_CRON = '0 * * * *';
+
 function startAlertScheduler() {
-  const schedule = process.env.ALERT_CRON || '0 */6 * * *';
+  const schedule = process.env.ALERT_CRON || DEFAULT_ALERT_CRON;
 
   cron.schedule(schedule, async () => {
     try {
@@ -273,6 +205,7 @@ function startAlertScheduler() {
   });
 
   console.log(`[AlertService] Scheduler started — running on cron: "${schedule}"`);
+  return schedule;
 }
 
-module.exports = { startAlertScheduler, runAlertCycle };
+module.exports = { startAlertScheduler, runAlertCycle, isDue, cycleKey, DEFAULT_ALERT_CRON };

@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,9 +9,9 @@
   html { scroll-behavior: smooth; }
 
   body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background-color: #F8FAFC;
-    color: #0F172A;
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    background-color: #F7F9F8;
+    color: #06525C;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
@@ -21,9 +20,9 @@
 
 /* ── Scrollbar ─────────────────────────────── */
 ::-webkit-scrollbar        { width: 6px; }
-::-webkit-scrollbar-track  { background: #F1F5F9; }
-::-webkit-scrollbar-thumb  { background: #CBD5E1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+::-webkit-scrollbar-track  { background: #EBF0EE; }
+::-webkit-scrollbar-thumb  { background: #C3D4D2; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #5E8D93; }
 
 /* ── Select reset ─────────────────────────── */
 select {

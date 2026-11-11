@@ -1,14 +1,552 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="InternPulse - A modern internship and remote job aggregation platform fetching postings in real-time." />
-    <title>InternPulse | Aggregated Internships & Remote Jobs</title>
-  </head>
-  <body class="bg-darkBg text-slate-100 min-h-screen">
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<html lang="en" data-type="software" data-radius="soft" data-ground="sky" data-buttons="solid" data-motion>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>InternPulse: internship search for students in India</title>
+<meta name="description" content="Internships and jobs in India from 44 companies’ careers pages and job boards, in one feed, with email alerts by role, company and place.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="InternPulse: internship search for students in India">
+<meta property="og:description" content="Internships and jobs in India from 44 companies’ careers pages and job boards, in one feed, with email alerts by role, company and place.">
+<meta property="og:image" content="/share.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#f7f9f8">
+<!-- the API the visit counter (/track.js) reports to; Vite fills it from VITE_API_URL -->
+<meta name="api-url" content="%VITE_API_URL%">
+<!-- <link rel="canonical" href="https://[the client's domain]/"> : add once the production domain is known -->
+<meta name="site-kind" content="software">
+<meta name="page-type" content="software">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wdth,wght@85..100,400..700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/system.css">
+<link rel="stylesheet" href="/assets/ui/cards.css">
+<link rel="stylesheet" href="/assets/motion/motion.css">
+<link rel="stylesheet" href="/assets/layout/layout.css">
+<link rel="stylesheet" href="/assets/icons/icon.css">
+<style>
+:root {
+  --p-bg: #f7f9f8; --p-surface: #ebf0ee; --p-ink: #06525c; --p-muted: #2f737d;
+  --p-accent: #06525c; --p-accent-ink: #f7f9f8; --p-action: #06525c; --p-action-ink: #f7f9f8;
+  --p-inv-bg: #06525c; --p-inv-surface: #205d66; --p-inv-ink: #f7f9f8; --p-inv-muted: #c1d0d2;
+  --p-inv-accent: #f7f9f8; --p-inv-accent-ink: #06525c; --p-inv-action: #f7f9f8; --p-inv-action-ink: #06525c;
+  --font-display: "IBM Plex Sans", system-ui, sans-serif;
+  --font-text: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 500;
+  --display-tracking: -0.025em;
+  --display-tracking-xl: -0.035em;
+  --ly-scale: 0.98;
+}
+</style>
+<link rel="stylesheet" href="/assets/layout/demo.css">
+<link rel="stylesheet" href="/assets/ui/base.css">
+<link rel="stylesheet" href="/assets/ui/window/fragment.css">
+<link rel="stylesheet" href="/assets/ui/doc/fragment.css">
+<link rel="stylesheet" href="/assets/ui/search/fragment.css">
+<link rel="stylesheet" href="/assets/ui/toggles/fragment.css">
+<link rel="stylesheet" href="/assets/ui/checklist/fragment.css">
+<link rel="stylesheet" href="/assets/diagrams/diagram.css">
+<script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
+<script src="/assets/backgrounds/backgrounds.js"></script>
+<script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
+<link rel="modulepreload" href="/assets/moments/moments.js">
+<link rel="modulepreload" href="/assets/moments/lib.js">
+<link rel="modulepreload" href="/assets/moments/pinned-chapters/moment.js">
+<!-- page CSS: only what sits inside a visual, and one --p-h per card group -->
+<style>
+  /* hero art (from the collage hero's demo): the lit sky ground under the effect, the result card at the
+     window's lower left, its lines, and the window's rows without a time column */
+  .hero__art { background:
+      radial-gradient(70% 60% at 18% 12%, color-mix(in oklab, var(--ground-surface) 80%, white), transparent 70%),
+      radial-gradient(60% 50% at 90% 100%, color-mix(in oklab, var(--ground-bg) 80%, var(--ground-accent)), transparent 70%),
+      var(--ground-bg); }
+  .hero__art > .ly-piece--note { left: var(--s-6); bottom: var(--s-6); width: 300px; z-index: 2; }
+  @media (max-width: 1023px) { .hero__art > .ly-piece--note { left: var(--s-4); bottom: var(--s-4); width: 270px; } }
+  .d-note__line { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 13px; color: #3d4247; border-top: 1px solid rgb(0 0 0 / .06); }
+  .d-note__line:first-of-type { border-top: 0; }
+  .d-note__line i { width: 18px; height: 18px; border-radius: 50%; flex: none; display: grid; place-items: center; background: #e7f4ec; color: #17673f; font-style: normal; font-size: 13px; font-weight: 500; }
+  .d-note__line i.warn { background: #fdf0dc; color: #8a5300; }
+  .d-note__line b { font-weight: 500; color: #16181a; }
+  .hero__proof { font-size: var(--t-small); color: var(--muted); }
+  .ly-piece--main .d-row { grid-template-columns: 36px minmax(0, 1fr) 48px 96px; }
+  .hero__art .d-win__body { grid-template-columns: 136px 1fr; }
+  .hero__art .d-main { padding-right: var(--ly-cut-room); }
+  .hero__art .d-tabs span { white-space: nowrap; }
+  @media (max-width: 639px) {
+    .hero__art .d-main { padding-right: var(--s-4); }
+    .ly-piece--main .d-row { grid-template-columns: 36px minmax(0, 1fr) auto; }
+    .hero__art .d-row .num, .hero__art .d-tabs span:last-child { display: none; }
+  }
+  .hero__art .d-row small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hero__art .d-win__mark { width: 14px; height: 14px; fill: #06525c; flex: none; }
+  .hero__art .d-thumb { display: grid; place-items: center; font: 500 13px/1 var(--font-text); color: #06525c; }
+  .hero__art .d-row .num { color: #5d6268; }
+
+  /* app-frame (sections-library.md, app-frame) */
+  .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); box-shadow: var(--u-shadow); }
+  .app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+  .app > .app__pane + .app__pane { border-left: 1px solid var(--u-line); }
+  .app > .app__pane > .ui-panel { width: 100%; border: 0; border-radius: 0; box-shadow: none; }
+  .app > .app__pane::after { content: ""; position: absolute; inset: auto 0 0 0; height: 64px; background: linear-gradient(transparent, var(--u-bg)); pointer-events: none; }
+  /* the open listing fills its pane: the page on the left, its note in the right margin beside the mark */
+  .app .ui-doc { width: 100%; min-height: 100%; padding: 32px 236px 0 36px; }
+  .app .ui-doc__note { right: 24px; top: 32px; }
+  @media (min-width: 1024px) and (max-width: 1279px) { .app.ui { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); } }
+  @media (max-width: 1023px) {
+    .app.ui { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .app > .app__pane--list { max-height: 252px; }
+    .app > .app__pane--list::after { display: none; }
+    .app .ui-win__side { display: none; }
+    .app .ui-win__body { grid-template-columns: minmax(0, 1fr); }
+    .app > .app__pane + .app__pane { border-left: 0; border-top: 1px solid var(--u-line); }
+  }
+  @media (max-width: 639px) {
+    .app.ui { grid-template-rows: minmax(0, 1fr); }
+    .app > .app__pane--list { display: none; }
+    .app > .app__pane + .app__pane { border-top: 0; }
+    .app .ui-doc { padding: 20px 20px 0; }
+    .app .ui-doc__note { display: none; }
+  }
+
+  /* the feature cards' panels; card lines in the ink (7:1 on the surface band) */
+  #search .card > p { color: var(--ink); }
+  #search .panel { --p-h: 336px; }
+  @media (min-width: 1024px) and (max-width: 1279px) { #search .panel { --p-h: 256px; } }
+  @media (max-width: 639px) { #search .panel { --p-h: 120px; } }
+
+  /* close-word: the name runs from line to line; its width is about 5 times its size in this face,
+     so the size is the column's width over 5.05 at each gutter (80, 48 and 24px) */
+  #contact .close__word { font-size: min(calc((100vw - 160px) / 5.05), 253px); overflow: visible; }
+  @media (max-width: 1023px) { #contact .close__word { font-size: calc((100vw - 96px) / 5.05); } }
+  @media (max-width: 639px) { #contact .close__word { font-size: calc((100vw - 48px) / 5.05); line-height: 1.3; } }
+
+  /* the alert steps: each step's picture is a drawn window on the lit ground */
+  .mo-pc__ui { aspect-ratio: 4 / 3; display: grid; place-items: center; padding: var(--s-7); background: var(--g-alt); border-radius: var(--r-md); }
+  .mo-pc__ui > .ui { width: min(100%, 400px); }
+  .mo-pc__visuals .mo-pc__ui { height: 100%; aspect-ratio: auto; }
+  /* the static layout (phones, tablets, reduced motion): each window shows whole at its own height */
+  [data-moment="pinned-chapters"]:not(.is-live) .mo-pc__ui { aspect-ratio: auto; }
+  /* a phone: each window on the text edge, and the static section two whole screens */
+  @media (max-width: 639px) {
+    [data-moment="pinned-chapters"]:not(.is-live) .mo-pc__ui { padding: 0; background: none; }
+    main > #alerts[data-moment]:not(.is-live) { min-height: calc(2 * 100lvh); }
+    #alerts:not(.is-live) .mo-pc__steps { gap: var(--s-8); }
+    #alerts:not(.is-live) .mo-pc__visual { margin-top: var(--s-6); }
+  }
+  /* under 360px the logo, the main button and the menu button do not fit one bar: the button waits in the menu sheet
+     (the hero shows the same button on the first screen) */
+  @media (max-width: 359px) { .nav:not(.is-open) .nav__actions { display: none; } }
+  @media (max-width: 1023px) { .mo-pc__ui { padding: var(--s-4); } }
+  /* the steps not yet reached: a deeper teal than --muted (6.2:1 on the ground), so they still read at
+     4.5:1 or more while the section fades in on the scroll; the step reached stays in the ink */
+  @media (prefers-reduced-motion: no-preference) { #alerts.is-live .mo-pc__step:not(.is-on) h3 { color: #1f6670; } }
+
+  .inbox__row { display: grid; gap: 2px; padding: 12px 16px; border-top: 1px solid var(--u-line); font-size: 13px; color: var(--u-muted); }
+  .inbox__row b { font-weight: 500; font-size: 14px; color: var(--u-ink); }
+  .inbox__row.is-new b::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--u-accent, #06525c); vertical-align: 1px; }
+
+  /* the tablet (640 to 1023): the static steps and the questions each take two whole screens; the hero window
+     shows four whole rows; the questions picture stays under 80% of the column */
+  @media (min-width: 640px) and (max-width: 1023px) {
+    main > #alerts[data-moment]:not(.is-live) { min-height: calc(2 * 100svh); }
+    #questions { --h: 2; }
+    .hero__art .d-row:nth-child(n+5) { display: none; }
+  }
+
+  /* the questions' picture: an alert email as it arrives */
+  #questions .panel { --p-h: 320px; margin-top: var(--s-7); }
+  @media (max-width: 639px) { #questions .panel { --p-h: 260px; } }
+  .mail { padding-bottom: 8px; }
+  .mail__subj { padding: 12px 16px 4px; font-size: 15px; font-weight: 500; color: var(--u-ink); }
+  .mail__row { display: grid; gap: 2px; margin: 8px 16px 0; padding: 10px 12px; border: 1px solid var(--u-line); border-radius: 10px; font-size: 13px; color: var(--u-muted); }
+  .mail__row b { font-weight: 500; color: var(--u-ink); font-size: 14px; }
+  .mail__apply { color: var(--u-accent, #06525c); font-weight: 500; }
+  .mail__foot { margin: 12px 16px 4px; font-size: 13px; color: var(--u-muted); }
+  .mail__foot u { color: var(--u-ink); }
+  .freq__opt { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--u-line); border-radius: 10px; font-size: 14px; color: var(--u-ink); }
+  .freq__opt + .freq__opt { margin-top: 8px; }
+  .freq__opt small { color: var(--u-muted); font-size: 13px; }
+  .freq__opt.is-on { border-color: var(--u-accent, #06525c); box-shadow: inset 0 0 0 1px var(--u-accent, #06525c); }
+  .freq__dot { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--u-muted); flex: none; }
+  .freq__opt.is-on .freq__dot { border: 5px solid var(--u-accent, #06525c); }
+  .freq { padding: 16px; }
+
+  /* short windows (a laptop under its browser bars, a small browser pane): the kit sets the hero, and every
+     section from 1280 up, to exact screens, so what a short screen could not hold ran over the next section.
+     Here each keeps at least its screens and grows past them instead, as the kit already does for sections
+     from 640 to 1279 and for the hero on a phone (the pinned steps keep their own heights); where the content
+     fits nothing changes */
+  @media (min-width: 640px) {
+    main > .hero { height: auto; min-height: 100vh; min-height: 100svh; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr; }
+    main > .hero > .wrap { height: auto; }
+  }
+  /* the pictures that take what the screen leaves keep a useful least height, so a short screen grows the
+     section rather than squeeze them to a sliver (the feed window is 393 and the hero picture 584 at 1024x768) */
+  #feed .app.fill { min-height: 320px; }
+  @media (max-width: 639px) { #feed .app.fill { min-height: 260px; } }
+  @media (min-width: 640px) and (max-width: 1023px) { .hero__art { min-height: 300px; } }
+  @media (min-width: 1280px) {
+    main > section:not(.hero, [data-moment]), footer.closing { height: auto; min-height: calc(var(--h, 1) * 100vh); min-height: calc(var(--h, 1) * 100svh); }
+    :where(main > section:not(.hero, [data-moment]), footer.closing) { display: flex; flex-direction: column; }
+    main > section:not(.hero, [data-moment]) > .wrap, footer.closing > .wrap { flex: 1 0 auto; height: auto; min-height: 0; }
+  }
+</style>
+</head>
+<body>
+<!-- type: software (an internship and job search app with email alerts)
+     deal: hero collage, nav nav-centre, close close-word, footer footer-statement, rhythm surface-pairs,
+           buttons solid, mark stack, ground sky; palette teal-on-paper, type plex
+     effect: painterly-landscape in the hero frame; card ground gradient-mesh (the search card group, still)
+     moments: pinned-chapters in #alerts (three alert steps shown in the space of one screen)
+     beats: the hero effect, pinned-chapters; #feed and #search between them, #questions calm before the close -->
+
+<header class="nav nav--centre">
+  <div class="wrap nav__bar">
+    <a class="skip-link" href="#top">Skip to content</a>
+    <a class="nav__logo" href="#top"><span class="mark" data-mark="stack" aria-hidden="true"></span>InternPulse</a>
+    <nav class="nav__links" aria-label="Main">
+      <div class="nav__item">
+        <a class="nav__link" href="#feed">Feed <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <div class="nav__menu">
+          <div class="wrap grid">
+            <div class="menu-col span-3">
+              <p class="t-label">In the app</p>
+              <a href="/app.html#jobs">Job feed<span>Every listing, newest first</span></a>
+              <a href="/app.html#companies">Company guides<span>Prep for 80 companies</span></a>
+              <a href="/app.html#resources">Resources<span>Resumes, DSA and interviews</span></a>
+            </div>
+            <div class="menu-col span-3">
+              <p class="t-label">On this page</p>
+              <a href="#feed">The feed<span>Openings across India in one window</span></a>
+              <a href="#search">Search and filters<span>Role, company, skill, place</span></a>
+              <a href="#alerts">Email alerts<span>Hourly, every 6 hours or daily</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item"><a class="nav__link" href="#search">Search</a></div>
+      <div class="nav__item"><a class="nav__link" href="#alerts">Alerts</a></div>
+      <div class="nav__item"><a class="nav__link" href="#questions">Questions</a></div>
+    </nav>
+    <div class="nav__actions">
+      <a class="btn btn--primary" href="/app.html#jobs">Find internships</a>
+    </div>
+    <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Menu">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero hero--collage" data-enter aria-labelledby="hero-h">
+    <div class="wrap"><div class="hero-text grid hero__grid">
+      <div class="hero__text span-5">
+        <h1 id="hero-h">One internship feed for students in India</h1>
+        <p class="hero__lead">InternPulse gathers openings in India from 44 companies’ careers pages, like Swiggy and Paytm, and from job boards, then links each card to the original posting.</p>
+        <div class="btn-row"><a class="btn btn--primary" href="/app.html#jobs">Find internships<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a><a class="btn btn--secondary" href="#alerts">Get email alerts</a></div>
+        <p class="hero__proof">Free to use, no account needed to browse.</p>
+      </div>
+      <div class="hero__art span-6 start-7" data-fx="painterly-landscape" data-fx-seed="7" role="img" aria-label="The InternPulse feed filtered to internships, newest first, and a daily alert that has just been sent">
+        <div class="ly-piece ly-piece--main d-win" aria-hidden="true">
+          <div class="d-win__bar"><span class="d-win__dots"><i></i><i></i><i></i></span><svg class="d-win__mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2.5" width="20" height="5.5" rx="2.75"/><rect x="2" y="9.25" width="14" height="5.5" rx="2.75"/><rect x="2" y="16" width="8" height="5.5" rx="2.75"/></svg><span>InternPulse · Job feed</span></div>
+          <div class="d-win__body">
+            <div class="d-side">
+              <span><i></i>All openings</span><span class="is-on"><i></i>Internships</span><span><i></i>Remote</span><span><i></i>Hybrid</span>
+              <span class="d-side__label">Sources</span><span><i></i>Careers pages</span><span><i></i>JSearch</span><span><i></i>Himalayas</span>
+            </div>
+            <div class="d-main">
+              <div class="d-main__head"><h4>Internships</h4></div>
+              <div class="d-tabs"><span class="is-on">Newest first</span><span>Highest stipend</span><span>Remote first</span></div>
+              <div class="d-rows">
+                <div class="d-row"><span class="d-thumb" style="background:#dbe9e6">C</span><div><b>Legal Intern</b><small>Continental · Faridabad</small></div><span class="num">6d</span><span class="d-chip">Intern</span></div>
+                <div class="d-row"><span class="d-thumb" style="background:#dfe6ef">C</span><div><b>Product Ops Intern</b><small>Composio · Bengaluru</small></div><span class="num">11d</span><span class="d-chip">Intern</span></div>
+                <div class="d-row"><span class="d-thumb" style="background:#e3ece0">H</span><div><b>AI Researcher Intern</b><small>HackerRank · Bengaluru</small></div><span class="num">13d</span><span class="d-chip d-chip--low">On-site</span></div>
+                <div class="d-row"><span class="d-thumb" style="background:#f0e2c8">S</span><div><b>Software Engineer, New Grad</b><small>Stripe · Bengaluru</small></div><span class="num">13d</span><span class="d-chip d-chip--low">New grad</span></div>
+                <div class="d-row"><span class="d-thumb" style="background:#e8e0ea">F</span><div><b>People Operations Intern</b><small>FamPay · Bengaluru</small></div><span class="num">14d</span><span class="d-chip d-chip--low">On-site</span></div>
+                <div class="d-row"><span class="d-thumb" style="background:#e9e4d6">R</span><div><b>Payroll Industrial Trainee</b><small>Rubrik · Bengaluru</small></div><span class="num">15d</span><span class="d-chip d-chip--low">Trainee</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ly-piece ly-piece--note d-card" aria-hidden="true" data-ly-steps="700">
+          <div class="d-card__row"><h5>Daily alert, AI/ML roles</h5><span class="d-chip" data-step data-step-at="4">Sent</span></div>
+          <div class="d-note__line" data-step><i class="warn">!</i><span><b>2 new internships</b> match since yesterday</span></div>
+          <div class="d-note__line" data-step><i>✓</i><span>Filtered to <b>India</b> and <b>Remote</b></span></div>
+          <div class="d-note__line" data-step><i>✓</i><span>One email at <b>09:00</b>, two listings</span></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="section" id="feed" aria-labelledby="feed-h">
+    <div class="wrap">
+      <div class="grid">
+        <h2 id="feed-h" class="span-5">Openings across India in one window</h2>
+        <p class="span-6 start-7">Open a listing to see its company, place, tags and age, then apply on the company’s own page or the board that posted it. InternPulse never asks you to apply through it. <a class="link" href="/app.html#jobs">Open the job feed</a></p>
+      </div>
+      <div class="ui app fill" role="img" aria-label="The InternPulse feed with ten openings in India in a list, and the AI Researcher Intern listing at HackerRank open beside it, marked as a match for an AI/ML alert" data-ui-pause-host>
+        <div class="app__pane app__pane--list">
+          <div class="ui ui-panel ui-win" data-ui="window" data-open="New" data-work="New" data-done="Saved">
+            <div class="ui-win__bar">
+              <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="ui-win__crumb">Job feed <i>/</i> <b>Internships</b></span>
+              <span class="ui-spacer"></span>
+              <span class="ui-win__search" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span class="ui-win__ph">Search</span><span class="ui-kbd">/</span></span>
+            </div>
+            <div class="ui-win__body">
+              <nav class="ui-win__side" aria-hidden="true">
+                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M2.5 4h11M2.5 8h11M2.5 12h7"/></svg>All<em>1,662</em></span>
+                <span class="ui-win__nav is-on"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M8 2.5 14 5.5 8 8.5 2 5.5z"/><path d="M4.5 7v3c1 1.1 2.2 1.6 3.5 1.6s2.5-.5 3.5-1.6V7"/></svg>Internships<em>75</em></span>
+                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M2.5 8h11M8 2.5c1.6 1.6 2.4 3.4 2.4 5.5S9.6 11.9 8 13.5C6.4 11.9 5.6 10.1 5.6 8S6.4 4.1 8 2.5z"/></svg>Remote<em>151</em></span>
+                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M2.5 13.5h11M4 13.5V6l4-3 4 3v7.5"/></svg>Hybrid<em>76</em></span>
+                <span class="ui-win__label">Sources</span>
+                <span class="ui-win__nav"><span class="ui-win__hash">#</span>Careers pages</span>
+                <span class="ui-win__nav"><span class="ui-win__hash">#</span>JSearch</span>
+              </nav>
+              <div class="ui-win__main">
+                <div class="ui-win__cols" aria-hidden="true"><span>Company</span><span>Role</span><span>Type</span><span>Posted</span></div>
+                <ul class="ui-win__rows">
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">H</span><span class="ui-win__who">HackerRank</span><span class="ui-win__sub">AI Researcher Intern, Bengaluru</span><span class="ui-win__st is-you" data-st>Match</span><span class="ui-win__age">13d</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">R</span><span class="ui-win__who">Rubrik</span><span class="ui-win__sub">Product Management Intern</span><span class="ui-win__st" data-st>Internship</span><span class="ui-win__age">6d</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">C</span><span class="ui-win__who">Continental</span><span class="ui-win__sub">Legal Intern, Faridabad</span><span class="ui-win__st" data-st>Internship</span><span class="ui-win__age">6d</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">C</span><span class="ui-win__who">Composio</span><span class="ui-win__sub">Product Ops Intern, Bengaluru</span><span class="ui-win__st" data-st>Internship</span><span class="ui-win__age">11d</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="5">S</span><span class="ui-win__who">Stripe</span><span class="ui-win__sub">Software Engineer, New Grad</span><span class="ui-win__st" data-st>New grad</span><span class="ui-win__age">13d</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">F</span><span class="ui-win__who">FamPay</span><span class="ui-win__sub">People Operations Intern</span><span class="ui-win__st" data-st>Internship</span><span class="ui-win__age">14d</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">R</span><span class="ui-win__who">Rubrik</span><span class="ui-win__sub">Payroll Industrial Trainee</span><span class="ui-win__st" data-st>Trainee</span><span class="ui-win__age">15d</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">P</span><span class="ui-win__who">Paytm</span><span class="ui-win__sub">Talent Acquisition Intern, Noida</span><span class="ui-win__st" data-st>Internship</span><span class="ui-win__age">22d</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">P</span><span class="ui-win__who">Paytm</span><span class="ui-win__sub">HR Onboarding Intern, Noida</span><span class="ui-win__st" data-st>Internship</span><span class="ui-win__age">33d</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="5">F</span><span class="ui-win__who">FamPay</span><span class="ui-win__sub">Security Engineer Intern</span><span class="ui-win__st" data-st>Internship</span><span class="ui-win__age">48d</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="app__pane app__pane--open" data-ui-loop>
+          <div class="ui ui-doc" data-ui="doc">
+            <article class="ui-doc__page">
+              <div class="ui-doc__label">HackerRank careers page · Bengaluru · On-site</div>
+              <div class="ui-doc__title">AI Researcher Intern, HackerRank</div>
+              <div class="ui-doc__text">HackerRank posted this internship on its own <mark class="ui-doc__mark is-on">careers page</mark>, one of the 44 that InternPulse reads for openings in India.</div>
+              <div class="ui-doc__text">The role is on-site in Bengaluru, and as an <mark class="ui-doc__mark" data-kind="Match" data-msg="Matches your alert for AI/ML roles." data-where="Daily alert, India and Remote">AI research internship</mark> it matches an alert for AI/ML roles.</div>
+              <div class="ui-doc__text">Posted 28 October. Apply on HackerRank’s careers page, where the company reads your application.</div>
+            </article>
+            <aside class="ui-doc__note ui-panel is-on" aria-live="polite">
+              <div class="ui-doc__kind"><span class="ui-doc__dot"></span><span data-doc-kind>Source</span></div>
+              <div class="ui-doc__msg" data-doc-msg>Posted by HackerRank itself, with no job board in between.</div>
+              <div class="ui-doc__where" data-doc-where>From the listing</div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section g2 ground-surface" id="search" aria-labelledby="search-h">
+    <div class="wrap">
+      <div class="group">
+        <div class="section-head">
+          <h2 id="search-h">Search the feed by role, company or skill. <span class="muted">Then narrow it by source, country and work mode.</span></h2>
+        </div>
+        <div class="grid">
+          <article class="card card--row card--open span-6">
+            <h3>Search finds roles as you type</h3>
+            <p>Type a role, a company or a skill such as React, and the list narrows with every letter.</p>
+            <div class="panel" data-fx="gradient-mesh" data-fx-seed="21" data-fx-params='{"drift":0}'>
+              <div class="stage stage--fade-b"><div class="at-rise fit to-edge" style="--fit-max:380px;--ax:max(24px, 50% - 190px);--ay:56px;--ay-sm:24px" data-ui-loop>
+                <div class="ui ui-panel ui-search" data-ui="search">
+                  <div class="ui-search__field">
+                    <svg class="ui-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+                    <span class="ui-search__q"><span data-search-q>ai intern</span><i class="ui-search__caret"></i></span>
+                    <kbd class="ui-search__kbd">/</kbd>
+                  </div>
+                  <div class="ui-search__group">Internships</div>
+                  <ul class="ui-search__list" data-search-list>
+                    <li class="ui-search__row is-sel"><span class="ui-search__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M2.5 5.5h11v7h-11z"/><path d="M6 5.5V4h4v1.5"/></svg></span><span class="ui-search__t"><b>AI</b> Researcher <b>Intern</b></span><span class="ui-search__m">HackerRank</span></li>
+                    <li class="ui-search__row"><span class="ui-search__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M2.5 5.5h11v7h-11z"/><path d="M6 5.5V4h4v1.5"/></svg></span><span class="ui-search__t">Content and <b>AI</b> <b>Intern</b></span><span class="ui-search__m">Vulcury</span></li>
+                    <li class="ui-search__row"><span class="ui-search__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M2.5 5.5h11v7h-11z"/><path d="M6 5.5V4h4v1.5"/></svg></span><span class="ui-search__t"><b>AI</b> and Growth <b>Intern</b></span><span class="ui-search__m">Scalanova Health</span></li>
+                  </ul>
+                  <div class="ui-search__foot"><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> to move</span><span><kbd>Enter</kbd> to open</span></div>
+                </div>
+              </div></div>
+            </div>
+          </article>
+          <article class="card card--row card--open span-6">
+            <h3>Filters narrow internships by place and type</h3>
+            <p>Switch on internships only, remote work or one country. The filters stack, and one click clears them.</p>
+            <div class="panel" data-fx="gradient-mesh" data-fx-seed="34" data-fx-params='{"drift":0}'>
+              <div class="stage stage--fade-b"><div class="at-right to-edge" style="--ax:32px;--ay:56px">
+                <div class="ui ui-panel ui-toggles" data-ui="toggles">
+                  <div class="ui-head">
+                    <svg class="ui-icon ui-toggles__ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3.5h11L9.5 8.5v4l-3 1.5V8.5z"/></svg>
+                    <div class="ui-title">Filters</div>
+                    <span class="ui-spacer"></span>
+                    <div class="ui-meta" data-tg-count>2 of 4 on</div>
+                  </div>
+                  <ul class="ui-toggles__list">
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Internships only</span><span class="ui-tg__sub">Hides full-time roles</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Internships only"><i></i></button></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Remote work</span><span class="ui-tg__sub">Roles you can do from home</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Remote work"><i></i></button></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Country: India</span><span class="ui-tg__sub">Bengaluru, Pune, Hyderabad and more</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="Country: India"><i></i></button></li>
+                    <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Source: careers pages</span><span class="ui-tg__sub">Straight from 44 companies</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="Source: careers pages"><i></i></button></li>
+                  </ul>
+                </div>
+              </div></div>
+            </div>
+          </article>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card card--row card--open span-6">
+          <h3>Reads 44 careers pages and job boards</h3>
+          <p>Swiggy, Paytm, Razorpay and 41 more companies list their Indian openings here, and JSearch and Himalayas add more from across India.</p>
+          <div class="panel" data-fx="gradient-mesh" data-fx-seed="47" data-fx-params='{"drift":0}'>
+            <div class="dg" data-diagram='{"layout":"fanin","alt":"Openings from 44 companies’ careers pages, JSearch, Himalayas, Adzuna and more job boards flow into InternPulse and out as one feed, refreshed every 30 minutes.","sources":[{"label":"Careers pages","icon":"ui:building-2","sub":"44 companies"},{"label":"JSearch","icon":"ui:globe","sub":"Google Jobs, India"},{"label":"Himalayas","icon":"ui:laptop","sub":"Remote, open to India"},{"label":"Adzuna","icon":"ui:search","sub":"India"},{"label":"More boards","icon":"ui:briefcase","sub":"Remotive, Jobicy"}],"target":{"label":"InternPulse","icon":"ui:layers"},"then":{"label":"Your feed","icon":"ui:list","meta":"30 min"}}'></div>
+          </div>
+        </article>
+        <article class="card card--row card--open span-6">
+          <h3>Prepares you for 80 companies</h3>
+          <p>Each company guide lists its hiring rounds, interview topics and a prep checklist, from Google to Qualcomm.</p>
+          <div class="panel" data-fx="gradient-mesh" data-fx-seed="58" data-fx-params='{"drift":0}'>
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:340px;--ax:max(24px, 50% - 170px);--ay:40px;--ay-sm:24px">
+              <div class="ui ui-panel ui-checks" data-ui="checklist">
+                <div class="ui-checks__head">
+                  <div class="ui-title">Google, prep checklist</div>
+                  <span class="ui-spacer"></span>
+                  <div class="ui-meta" data-checks-count>2 of 5</div>
+                </div>
+                <div class="ui-checks__bar"><i data-checks-bar style="--k:0.4"></i></div>
+                <ul class="ui-checks__list">
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">One-page resume with numbers</span></li>
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Study OS, networks and DBMS</span></li>
+                  <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">100+ LeetCode medium and hard</span></li>
+                  <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Two or three larger projects</span></li>
+                  <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Behavioural answers in STAR form</span></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="alerts" style="--h: 2" data-moment="pinned-chapters" aria-labelledby="alerts-h">
+    <div class="wrap mo-pc__grid">
+      <div class="mo-pc__text">
+        <h2 id="alerts-h">Email alerts in 3 steps</h2>
+        <ol class="mo-pc__steps">
+          <li class="mo-pc__step">
+            <h3>Pick internship roles, companies and places</h3>
+            <p>Choose from ten interests, such as AI/ML, VLSI or startups, and five regions from India to Europe.</p>
+            <figure class="mo-pc__visual"><div class="mo-pc__ui">
+              <div class="ui ui-panel ui-toggles" data-ui="toggles">
+                <div class="ui-head">
+                  <svg class="ui-icon ui-toggles__ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5a3.5 3.5 0 0 1 3.5 3.5c0 3.5 1.5 4.5 1.5 4.5H3s1.5-1 1.5-4.5A3.5 3.5 0 0 1 8 2.5z"/><path d="M6.8 13a1.3 1.3 0 0 0 2.4 0"/></svg>
+                  <div class="ui-title">Alert preferences</div>
+                  <span class="ui-spacer"></span>
+                  <div class="ui-meta" data-tg-count>3 of 4 on</div>
+                </div>
+                <ul class="ui-toggles__list">
+                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">AI/ML roles</span><span class="ui-tg__sub">Machine learning, NLP, vision</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="AI/ML roles"><i></i></button></li>
+                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Embedded roles</span><span class="ui-tg__sub">Firmware, IoT, RTOS</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Embedded roles"><i></i></button></li>
+                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">ECE companies</span><span class="ui-tg__sub">Qualcomm, Intel, Texas Instruments</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="ECE companies"><i></i></button></li>
+                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Location: India</span><span class="ui-tg__sub">One of five regions</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Location: India"><i></i></button></li>
+                </ul>
+              </div>
+            </div></figure>
+          </li>
+          <li class="mo-pc__step">
+            <h3>Choose hourly, every 6 hours or daily</h3>
+            <p>InternPulse checks for new listings every hour and writes only when something matches.</p>
+            <figure class="mo-pc__visual"><div class="mo-pc__ui">
+              <div class="ui ui-panel freq">
+                <div class="ui-head"><div class="ui-title">How often</div></div>
+                <div class="freq__opt"><span>Hourly<br><small>As soon as a match appears</small></span><span class="freq__dot"></span></div>
+                <div class="freq__opt is-on"><span>Every 6 hours<br><small>Up to four emails a day</small></span><span class="freq__dot"></span></div>
+                <div class="freq__opt"><span>Daily<br><small>One email a day at most</small></span><span class="freq__dot"></span></div>
+              </div>
+            </div></figure>
+          </li>
+          <li class="mo-pc__step">
+            <h3>Read up to 5 internships an email</h3>
+            <p>Each email links to the original postings and ends with a one-click unsubscribe link.</p>
+            <figure class="mo-pc__visual"><div class="mo-pc__ui">
+              <div class="ui ui-panel inbox">
+                <div class="ui-head"><div class="ui-title">Inbox</div><span class="ui-spacer"></span><div class="ui-meta">InternPulse alerts</div></div>
+                <div class="inbox__row is-new"><b>2 new internships for AI/ML roles</b><span>HackerRank and Vulcury · 09:00</span></div>
+                <div class="inbox__row"><b>1 new internship for AI/ML roles</b><span>Scalanova Health · yesterday</span></div>
+                <div class="inbox__row"><b>Your InternPulse alerts are set up</b><span>AI/ML and embedded roles, daily · Mon</span></div>
+              </div>
+            </div></figure>
+          </li>
+        </ol>
+        <p><a class="link" href="/app.html#alerts">Set up email alerts</a></p>
+      </div>
+      <div class="mo-pc__visuals frame"></div>
+    </div>
+  </section>
+
+  <section class="section g2m" id="questions" aria-labelledby="questions-h">
+    <div class="wrap grid grid--top">
+      <div class="span-5 section-head">
+        <h2 id="questions-h">Questions</h2>
+        <p>What students ask before they rely on the feed.</p>
+        <div class="panel" role="img" aria-label="An InternPulse alert email with two AI internships, one at HackerRank in Bengaluru and one remote in India, each linking to where you apply, and a one-click unsubscribe link at its foot">
+          <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:400px;--ax:max(24px, 50% - 200px);--ay:40px;--ay-sm:24px" aria-hidden="true">
+            <div class="ui ui-panel mail">
+              <div class="ui-head"><svg class="ui-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11v8h-11z"/><path d="m2.5 5 5.5 4 5.5-4"/></svg><div class="ui-title">InternPulse alerts</div><span class="ui-spacer"></span><div class="ui-meta">09:00</div></div>
+              <div class="mail__subj">2 new internships for AI/ML roles</div>
+              <div class="mail__row"><b>AI Researcher Intern</b><span>HackerRank · Bengaluru</span><span class="mail__apply">Apply on HackerRank’s careers page</span></div>
+              <div class="mail__row"><b>Creative Content and AI Intern</b><span>Vulcury · Remote, India</span><span class="mail__apply">Apply on Himalayas</span></div>
+              <div class="mail__foot">Too many emails? <u>Unsubscribe in one click</u></div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+      <div class="faq span-6 start-7">
+        <div class="faq__item"><h3>Does InternPulse cost anything?</h3><p>No. Browsing, filters and email alerts are free, and browsing needs no account.</p></div>
+        <div class="faq__item"><h3>How fresh are the internship listings?</h3><p>The feed refreshes every 30 minutes, and listings older than 60 days are dropped.</p></div>
+        <div class="faq__item"><h3>Where do the openings in India come from?</h3><p>Mostly from 44 companies’ own careers pages, plus JSearch and Himalayas. The feed opens on India; clear the country filter to see remote and European roles too.</p></div>
+        <div class="faq__item"><h3>What does InternPulse need for alerts?</h3><p>An email address. Pick roles, places and how often, and change them any time on the Alerts page.</p></div>
+        <div class="faq__item"><h3>How do I stop InternPulse alerts?</h3><p>Every alert email has a one-click unsubscribe link. Asking on the Alerts page sends you one too.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer closing footer--statement g2m" id="contact" aria-labelledby="close-h">
+  <div class="wrap">
+    <div class="closing__cta close--word">
+      <div class="section-head--split">
+        <div><h2 id="close-h">Find internships</h2><p class="t-lead">Free to use, no account needed to browse.</p></div>
+        <a class="btn btn--primary" href="/app.html#jobs">Find internships<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
+      </div>
+      <p class="close__word" aria-hidden="true">InternPulse</p>
+    </div>
+    <div class="closing__links">
+      <div class="grid">
+        <div class="span-4 stack-4">
+          <a class="nav__logo" href="#top"><span class="mark" data-mark="stack" aria-hidden="true"></span>InternPulse</a>
+          <p class="footer__lede">Internships and jobs in India from careers pages and job boards, in one feed.</p>
+        </div>
+        <div class="span-2 footer__col"><h3>Product</h3><ul><li><a href="#feed">Feed</a></li><li><a href="#search">Search</a></li><li><a href="#alerts">Alerts</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>In the app</h3><ul><li><a href="/app.html#jobs">Job feed</a></li><li><a href="/app.html#companies">Company guides</a></li><li><a href="/app.html#resources">Resources</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Reading</h3><ul><li><a href="/app.html#blog">Blog</a></li><li><a href="/app.html#about">About</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Help</h3><ul><li><a href="#questions">Questions</a></li><li><a href="/app.html#alerts">Manage alerts</a></li></ul></div>
+      </div>
+      <div class="footer__legal">
+        <span>&copy; 2026 InternPulse</span>
+        <div class="socials"></div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/assets/system.js"></script>
+<script type="module" src="/assets/motion/motion.js"></script>
+<script type="module" src="/assets/layout/layout.js"></script>
+<script type="module" src="/assets/diagrams/mount.js"></script>
+<script src="/track.js" defer></script>
+</body>
 </html>
