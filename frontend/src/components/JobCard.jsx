@@ -62,7 +62,8 @@ export default function JobCard({ job }) {
 
   const src   = styleOf(job.source);
   const wm    = WORK_MODE_STYLES[job.workMode] ?? WORK_MODE_STYLES['On-site'];
-  const skills = (job.skills || job.tags || []).slice(0, 5);
+  const allSkills = [...new Set(job.skills || job.tags || [])];   // no repeats: each tag is also its React key
+  const skills = allSkills.slice(0, 5);
 
   return (
     <div className="bg-white border border-[#D5E1DF] rounded-2xl p-5 flex flex-col hover:border-[#C3D4D2] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
@@ -125,8 +126,8 @@ export default function JobCard({ job }) {
               {t}
             </span>
           ))}
-          {(job.skills || job.tags || []).length > 5 && (
-            <span className="px-2 py-0.5 text-[10px] text-[#5E8D93]">+{(job.skills || job.tags || []).length - 5}</span>
+          {allSkills.length > 5 && (
+            <span className="px-2 py-0.5 text-[10px] text-[#5E8D93]">+{allSkills.length - 5}</span>
           )}
         </div>
       )}

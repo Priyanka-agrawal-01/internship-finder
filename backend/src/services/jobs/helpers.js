@@ -111,15 +111,19 @@ function stableId(...parts) {
   return crypto.createHash('sha1').update(parts.join('|')).digest('hex').slice(0, 16);
 }
 
+// Tags without blanks or repeats (a board's team and department are often the same word)
+const uniqueTags = list => [...new Set((Array.isArray(list) ? list : []).map(t => String(t || '').trim()).filter(Boolean))];
+
 /** The normalised job every source produces. */
 function base(extra) {
   return {
     stipend:  null,
     duration: null,
     logoUrl:  null,   // only set when the source API provides a real logo
-    skills:   [],
     workMode: 'On-site',
     ...extra,
+    tags:   uniqueTags(extra.tags),
+    skills: uniqueTags(extra.skills || extra.tags),
     isNew: isPostedRecently(extra.postedAt),
   };
 }

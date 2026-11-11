@@ -5,6 +5,23 @@ const mongoose = require('mongoose');
 // ─── DB connection state ──────────────────────────────────────────────────────
 let isConnected = false;
 
+// Once connected, Mongoose reconnects by itself. A first connection that fails (the
+// database or the network briefly down at start-up) is retried here, 30 s, then
+// 1, 2, 4 and every 5 minutes, so the server doesn't run without accounts until
+// someone restarts it.
+const FIRST_RETRY_MS = 30 * 1000;
+const MAX_RETRY_MS   = 5 * 60 * 1000;
+let retryDelay = FIRST_RETRY_MS;
+let retryTimer = null;
+
+function scheduleRetry() {
+  if (retryTimer) return;
+  console.warn(`[MongoDB] Trying again in ${Math.round(retryDelay / 1000)} s`);
+  retryTimer = setTimeout(() => { retryTimer = null; connectDB(); }, retryDelay);
+  retryTimer.unref?.();   // a one-off script (npm run create-admin) still exits on its own
+  retryDelay = Math.min(retryDelay * 2, MAX_RETRY_MS);
+}
+
 async function connectDB() {
   if (isConnected) return;
 
@@ -33,10 +50,12 @@ async function connectDB() {
       await connect();
     }
     isConnected = true;
+    retryDelay = FIRST_RETRY_MS;
     console.log('[MongoDB] Connected successfully');
   } catch (err) {
     console.error('[MongoDB] Connection failed:', err.message);
-    console.warn('[MongoDB] Continuing without database — subscriptions will use in-memory fallback.');
+    console.warn('[MongoDB] Continuing without database for now — accounts are unavailable and subscriptions use the in-memory fallback.');
+    scheduleRetry();
   }
 }
 
